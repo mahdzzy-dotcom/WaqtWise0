@@ -463,9 +463,13 @@
     dlg.footer.appendChild(h('button', { class: 'btn', text: 'Close', onclick: () => dlg.close() }));
   };
 
+  WW.refreshCity = async function refreshCity() {
+    WW.state.city = await WW.call('getCityInfo');
+  };
+
   async function reloadEverything() {
     const boot = await WW.call('bootstrap');
-    Object.assign(WW.state, { settings: boot.settings, categories: boot.categories, cities: boot.cities, methods: boot.methods, todayKey: boot.currentPlanningDayKey });
+    Object.assign(WW.state, { settings: boot.settings, categories: boot.categories, cities: boot.cities, methods: boot.methods, city: boot.city, todayKey: boot.currentPlanningDayKey });
     WW.applyTheme(boot.settings.theme);
     if (WW.state.view === 'settings') WW.renderSettings();
     else if (WW.state.view === 'stats') await WW.showStats();

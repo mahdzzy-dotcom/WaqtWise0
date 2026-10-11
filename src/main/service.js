@@ -7,11 +7,12 @@
 const crypto = require('crypto');
 const core = require('../core');
 const { copy } = require('./planner/util');
+const { formatTime12InZone } = require('../core/time');
 
-const { CITIES, findCity, METHOD_KEYS, METHOD_LABELS, currentPlanningDayKey, createPrayerProvider } = core;
+const { CITIES, resolveCity, METHOD_KEYS, METHOD_LABELS, currentPlanningDayKey, createPrayerProvider } = core;
 
 function defaultProviderFactory(settings) {
-  const city = findCity(settings.cityName);
+  const city = resolveCity(settings);
   return createPrayerProvider({
     latitude: city.latitude,
     longitude: city.longitude,
@@ -41,7 +42,7 @@ class PlannerService {
 
   provider() {
     const s = this.settings;
-    const key = JSON.stringify([s.cityName, s.method, s.adjustments]);
+    const key = JSON.stringify([s.cityName, s.useCustomCity, s.customCity, s.method, s.adjustments]);
     if (!this.providerCache || this.providerCache.key !== key) {
       this.providerCache = { key, provider: this.providerFactory(s) };
     }
@@ -50,7 +51,24 @@ class PlannerService {
 
   // Options used whenever occurrences are worked out. `tasks` lets tasks that follow other tasks find them.
   recurrenceOptions() {
-    return { workingDays: this.settings.workingDays, tasks: this.data.tasks };
+    return { workingDays: this.settings.workingDays, weekStartsOn: this.weekStart(), tasks: this.data.tasks };
+  }
+
+  // The city in use, and whether its time zone is different from this computer's.
+  cityInfo() {
+    const city = resolveCity(this.settings);
+    const computer = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return { name: city.name, custom: city.custom, timeZone: city.timeZone, computerTimeZone: computer, differs: Boolean(city.timeZone) && city.timeZone !== computer };
+  }
+
+  getCityInfo() {
+    return this.cityInfo();
+  }
+
+  // A prayer-time boundary written in the city's time zone (the computer's clock for the built-in cities).
+  zoneTimeLabel(date) {
+    const { timeZone } = resolveCity(this.settings);
+    return timeZone ? formatTime12InZone(date, timeZone) : core.formatTime12(date);
   }
 
   weekStart() {
@@ -86,6 +104,7 @@ class PlannerService {
       cities: CITIES.map((c) => c.name),
       methods: METHOD_KEYS.map((key) => ({ key, label: METHOD_LABELS[key] })),
       currentPlanningDayKey: currentPlanningDayKey(this.provider(), this.now()),
+      city: this.cityInfo(),
       loadNotes: copy(this.store.loadNotes || []),
     };
   }
@@ -134,7 +153,7 @@ for (const mixin of MIXINS) {
 const PUBLIC_METHODS = [
   'bootstrap', 'getDay', 'getStats', 'getUpcoming', 'getMissed', 'dismissMissed', 'clearMissed', 'newTaskDefaults', 'getTaskForEdit', 'previewForm', 'saveTask',
   'getReferenceChoices', 'getDeleteImpact', 'getAlertPreset', 'deleteTask', 'setDone', 'duplicateTask', 'getSettings', 'saveSettings', 'addCategory', 'updateCategory',
-  'deleteCategory', 'listBackups', 'restoreBackup',
+  'deleteCategory', 'listBackups', 'restoreBackup', 'getCityInfo',
 ];
 
 module.exports = { PlannerService, PUBLIC_METHODS, defaultProviderFactory };

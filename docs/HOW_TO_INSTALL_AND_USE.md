@@ -72,6 +72,18 @@ presses right when it appears are ignored on purpose, so typing cannot close it 
 
 Run the newer installer. Your tasks and settings are kept.
 
+## A city that is not in the list
+
+Settings -> Prayer Times -> City -> **Custom city…**: type the name, latitude, longitude and time zone (for example
+`Asia/Riyadh`; the button next to it fills in this computer's time zone), then **Save city**. Prayer times come from
+the coordinates, and the start and end of each zone are shown in that city's time zone. Your tasks keep using this
+computer's clock. Choosing a city from the list again keeps the custom one saved for later.
+
+## Tasks that repeat every 2 or more weeks
+
+Their weeks start on the **first day of the week** chosen in Settings. Changing that setting can move such tasks to
+other weeks (tasks that repeat every week are not affected).
+
 ## Backups and statistics history
 
 - WaqtWise keeps its own copies automatically in a `backups` folder next to your data: one per day (the last 7 days)

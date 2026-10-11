@@ -3,7 +3,7 @@
 // Application settings (spec 12.4): defaults and validation.
 // Reminder-related settings share their names with DEFAULT_REMINDER_SETTINGS.
 
-const { CITIES, DEFAULT_CITY } = require('./cities');
+const { CITIES, DEFAULT_CITY, validateCustomCity } = require('./cities');
 const { PRAYERS } = require('./zones');
 const { DEFAULT_REMINDER_SETTINGS } = require('./reminders');
 
@@ -175,6 +175,8 @@ const DEFAULT_SETTINGS = {
   ...DEFAULT_REMINDER_SETTINGS,
   // Prayer times
   cityName: DEFAULT_CITY,
+  useCustomCity: false, // true: use customCity below instead of the list
+  customCity: null, // { name, latitude, longitude, timeZone }
   method: 'egyptian',
   adjustments: { fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 },
   hijriAdjustment: 0, // -1, 0 or +1 day
@@ -210,6 +212,7 @@ function validateSettings(settings) {
   const errors = [];
   const s = settings;
   if ('cityName' in s && !CITIES.some((c) => c.name === s.cityName)) errors.push('Please choose a city from the list');
+  if ('customCity' in s && s.customCity !== null) errors.push(...validateCustomCity(s.customCity));
   if ('method' in s && !METHOD_KEYS.includes(s.method)) errors.push('Please choose a calculation method from the list');
   if ('adjustments' in s) {
     for (const prayer of PRAYERS) {
@@ -245,7 +248,7 @@ function validateSettings(settings) {
   if ('weekStart' in s && ![6, 0, 1].includes(s.weekStart)) errors.push('Choose Saturday, Sunday or Monday as the first day of the week');
   if ('alertScreens' in s && !ALERT_SCREENS.includes(s.alertScreens)) errors.push('Choose all screens or the main screen');
   if ('alertAppearance' in s) errors.push(...validateAppearance(s.alertAppearance));
-  for (const key of ['notificationsEnabled', 'soundEnabled', 'zoneStartNotifications', 'startWithWindows', 'showBackgroundMessage', 'backgroundMessageShown', 'welcomeShown', 'fullScreenAlerts', 'fullScreenDefaultForNewTasks', 'alertSoundRepeat']) {
+  for (const key of ['notificationsEnabled', 'soundEnabled', 'zoneStartNotifications', 'startWithWindows', 'showBackgroundMessage', 'backgroundMessageShown', 'welcomeShown', 'fullScreenAlerts', 'fullScreenDefaultForNewTasks', 'alertSoundRepeat', 'useCustomCity']) {
     if (key in s && typeof s[key] !== 'boolean') errors.push(`${key} must be on or off`);
   }
   return errors;
@@ -256,6 +259,8 @@ function mergeSettings(current, patch) {
   const errors = validateSettings(patch);
   if (errors.length) throw new Error(errors.join('; '));
   const merged = { ...current, ...patch };
+  if (patch.customCity) merged.customCity = { ...patch.customCity, name: patch.customCity.name.trim(), timeZone: patch.customCity.timeZone.trim() };
+  if (merged.useCustomCity && !merged.customCity) throw new Error('Enter the city name, latitude, longitude and time zone first');
   merged.adjustments = { ...current.adjustments, ...(patch.adjustments || {}) };
   if (patch.workingDays) merged.workingDays = Array.from(new Set(patch.workingDays)).sort((a, b) => a - b);
   if (patch.alertAppearance) merged.alertAppearance = mergeAppearance(current.alertAppearance, patch.alertAppearance);
@@ -278,6 +283,7 @@ function sanitizeSettings(raw) {
       else clean[key] = raw[key];
     }
   }
+  if (clean.useCustomCity && !clean.customCity) clean.useCustomCity = false;
   return clean;
 }
 

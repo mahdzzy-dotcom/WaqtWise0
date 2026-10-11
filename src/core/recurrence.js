@@ -210,7 +210,7 @@ function monthDates(year, month, spec, opts) {
 }
 
 // ---- Periods: the repeating "blocks" of time the interval counts in -----------------------
-// daily  -> one day        weekly -> one Sun-Sat week     monthly -> one month     yearly -> one year
+// daily  -> one day        weekly -> one week (from the first day of the week in Settings)     monthly -> one month     yearly -> one year
 
 function periodInfo(rule, opts) {
   const start = splitKey(rule.startDate);

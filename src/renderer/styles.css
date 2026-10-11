@@ -594,3 +594,8 @@ input.onoff:checked ~ .onoff-state { color: var(--accent); }
 .backup-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .backup-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
 .backup-info { display: flex; flex-direction: column; gap: 2px; }
+
+/* Custom city */
+.custom-city { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.custom-city { max-width: 460px; }
+.custom-city .row > input { flex: 1 1 140px; min-width: 120px; width: auto; }

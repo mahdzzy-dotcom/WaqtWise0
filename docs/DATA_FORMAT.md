@@ -64,6 +64,12 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
   `alertAppearance` (colors as `#rrggbb`, `fontFamily`, `alignment`, and the groups `name`, `notes` and `show`).
   Missing or invalid values are replaced by the defaults when a backup is imported.
 
+## Settings added in this version
+
+`settings.useCustomCity` (true/false) and `settings.customCity` (`null` or `{ "name", "latitude", "longitude", "timeZone" }`,
+the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is dropped when a backup is imported.
+`settings.weekStart` (6, 0 or 1) is also used to count the weeks of tasks that repeat every 2 or more weeks.
+
 ## Saved data file (not the export file)
 
 `data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone], ...] } }`,

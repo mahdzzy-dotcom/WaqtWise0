@@ -535,6 +535,29 @@ async function setTime(page, hour, minute, ampm) {
     assert.deepEqual(titles, ['Prayer Times', 'Reminders & Notifications', 'Application', 'Full-screen reminder', 'Sounds', 'Categories', 'Data']);
     await shot(page, 'settings');
   });
+  await step('a custom city can be typed in (name, latitude, longitude, time zone) and the list can be used again', async () => {
+    await page.selectOption('select[aria-label="City"]', '__custom__');
+    await page.waitForSelector('.custom-city');
+    await page.fill('input[aria-label="City name"]', 'Riyadh');
+    await page.fill('input[aria-label="Latitude"]', '24.7136');
+    await page.fill('input[aria-label="Longitude"]', '46.6753');
+    await page.fill('input[aria-label="Time zone"]', 'Asia/Riyadh');
+    await page.click('.custom-city button:has-text("Save city")');
+    await page.waitForFunction(() => document.querySelector('.toast') && /City saved/.test(document.querySelector('.toast').textContent));
+    assert.equal(service.getSettings().useCustomCity, true);
+    assert.equal(service.getSettings().customCity.timeZone, 'Asia/Riyadh');
+    await shot(page, 'settings-custom-city');
+    // wrong values are refused with a message
+    await page.fill('input[aria-label="Time zone"]', 'Mars/Base');
+    await page.click('.custom-city button:has-text("Save city")');
+    await page.waitForSelector('.toast.error');
+    assert.equal(service.getSettings().customCity.timeZone, 'Asia/Riyadh');
+    await page.waitForFunction(() => !document.querySelector('.toast.error'), null, { timeout: 15000 });
+    await page.selectOption('select[aria-label="City"]', 'Cairo');
+    await page.waitForFunction(() => !document.querySelector('.custom-city'));
+    assert.equal(service.getSettings().useCustomCity, false);
+    assert.equal(service.getSettings().customCity.name, 'Riyadh');
+  });
   await step('Restore from backup lists the saved copies and closes with Esc', async () => {
     service.store.backupNow('before-import');
     await page.click('button:has-text("Restore from backup")');

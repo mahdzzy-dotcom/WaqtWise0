@@ -39,4 +39,40 @@ function findCity(name) {
   return CITIES.find((c) => c.name === name) || null;
 }
 
-module.exports = { CITIES, DEFAULT_CITY, findCity };
+// ---- a city typed in by the user -----------------------------------------------------------------
+// { name, latitude, longitude, timeZone }  (timeZone is an IANA name such as "Asia/Riyadh")
+
+function isValidTimeZone(timeZone) {
+  if (typeof timeZone !== 'string' || timeZone.trim() === '' || timeZone.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Returns a list of friendly messages (empty when the city is fine).
+function validateCustomCity(city) {
+  const errors = [];
+  if (!city || typeof city !== 'object' || Array.isArray(city)) return ['Enter the city name, latitude, longitude and time zone'];
+  if (typeof city.name !== 'string' || city.name.trim() === '' || city.name.trim().length > 40) errors.push('The city name must be 1 to 40 characters');
+  if (typeof city.latitude !== 'number' || !Number.isFinite(city.latitude) || city.latitude < -90 || city.latitude > 90) errors.push('Latitude must be a number from -90 to 90');
+  if (typeof city.longitude !== 'number' || !Number.isFinite(city.longitude) || city.longitude < -180 || city.longitude > 180) errors.push('Longitude must be a number from -180 to 180');
+  if (!isValidTimeZone(city.timeZone)) errors.push('The time zone is not valid. Use a name like Asia/Riyadh or Europe/London');
+  return errors;
+}
+
+// The city the settings point at: { name, latitude, longitude, timeZone, custom }.
+// timeZone is null for the built-in cities (their times are shown on this computer's clock, as always).
+function resolveCity(settings) {
+  const s = settings || {};
+  if (s.useCustomCity && s.customCity && validateCustomCity(s.customCity).length === 0) {
+    const c = s.customCity;
+    return { name: c.name.trim(), latitude: c.latitude, longitude: c.longitude, timeZone: c.timeZone, custom: true };
+  }
+  const city = findCity(s.cityName) || findCity(DEFAULT_CITY);
+  return { ...city, timeZone: null, custom: false };
+}
+
+module.exports = { CITIES, DEFAULT_CITY, findCity, isValidTimeZone, validateCustomCity, resolveCity };

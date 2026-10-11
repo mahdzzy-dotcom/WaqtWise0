@@ -95,7 +95,22 @@ function formatTime12(date) {
   return `${hours12}:${pad(minutes)} ${suffix}`;
 }
 
+const zoneFormatters = new Map();
+
+// The clock time of a moment in another time zone, written like formatTime12 ("4:35 AM").
+function formatTime12InZone(date, timeZone) {
+  let formatter = zoneFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit', hourCycle: 'h12' });
+    zoneFormatters.set(timeZone, formatter);
+  }
+  const parts = formatter.formatToParts(date);
+  const get = (type) => (parts.find((p) => p.type === type) || { value: '' }).value;
+  return `${get('hour')}:${get('minute')} ${get('dayPeriod').toUpperCase()}`;
+}
+
 module.exports = {
+  formatTime12InZone,
   MS_PER_MINUTE,
   MONTH_SHORT,
   dateKey,

@@ -75,4 +75,7 @@ Do these once after installing. They are the parts that cannot be tested without
 18. **Backups**: Settings -> Data -> **Restore from backup…** lists today's copy. Import a backup file: a "Before an import" copy appears; restore it and your previous tasks come back.
 19. **Past statistics**: complete a task, wait for the next day (or change the computer date), then delete that task: the finished day in Statistics keeps its numbers.
 
+20. **Custom city**: Settings -> City -> Custom city…, enter a city with its coordinates and time zone, Save city: the zone times in the Daily View change. Choose Cairo again: they go back.
+21. **Every 2 weeks**: a task repeating every 2 weeks on Sunday and Monday; change the first day of the week to Monday in Settings and see that its weeks shift.
+
 If any of these fails, note which number and what you saw, and send it back.

@@ -273,12 +273,71 @@
     return box;
   }
 
+  const CUSTOM_VALUE = '__custom__';
+  let customPending = false; // "Custom city…" chosen but not saved yet
+
+  // Name, latitude, longitude and time zone of a city that is not in the list.
+  function customCityPanel(s) {
+    const c = s.customCity || {};
+    const computerZone = (WW.state.city && WW.state.city.computerTimeZone) || '';
+    const field = (label, value, type, extra = {}) => h('input', { type, value: value === undefined || value === null ? '' : String(value), 'aria-label': label, placeholder: label, ...extra });
+    const name = field('City name', c.name, 'text', { maxlength: '40' });
+    const lat = field('Latitude', c.latitude, 'text', { inputmode: 'decimal' });
+    const lon = field('Longitude', c.longitude, 'text', { inputmode: 'decimal' });
+    const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
+    const zone = field('Time zone', c.timeZone || computerZone, 'text', { list: 'tz-list', spellcheck: 'false' });
+    const note = h('p', { class: 'hint' });
+    const num = (el) => (el.value.trim() === '' ? NaN : Number(el.value.trim().replace(',', '.')));
+    const info = () => {
+      const city = WW.state.city;
+      note.textContent = city && city.custom && city.differs
+        ? `Prayer times (zone start and end) are shown in ${city.timeZone} time. Your tasks keep using this computer's clock (${city.computerTimeZone}).`
+        : 'Prayer times are worked out from the latitude and longitude, and shown in the time zone you enter.';
+    };
+    info();
+    return h('div', { class: 'custom-city' },
+      h('div', { class: 'row' }, name),
+      h('div', { class: 'row' }, lat, lon),
+      h('div', { class: 'row' }, zone,
+        h('button', { type: 'button', class: 'btn', text: "This computer's time zone", onclick: () => { zone.value = computerZone; } })),
+      h('datalist', { id: 'tz-list' }, zones.map((z) => h('option', { value: z }))),
+      h('div', { class: 'row' },
+        h('button', {
+          type: 'button', class: 'btn primary', text: 'Save city',
+          onclick: async () => {
+            const latitude = num(lat);
+            const longitude = num(lon);
+            if (Number.isNaN(latitude) || Number.isNaN(longitude)) { WW.toast('Latitude and longitude must be numbers, like 24.7136 and 46.6753', 'error'); return; }
+            await save({ useCustomCity: true, customCity: { name: name.value, latitude, longitude, timeZone: zone.value } });
+            if (WW.state.settings.useCustomCity) { customPending = false; await WW.refreshCity(); WW.toast('City saved'); WW.renderSettings(); }
+          },
+        })),
+      note);
+  }
+
   WW.renderSettings = function renderSettings() {
     const view = clear(document.getElementById('view'));
     const s = WW.state.settings;
 
-    const city = h('select', { 'aria-label': 'City', onchange: (e) => save({ cityName: e.target.value }) },
-      WW.state.cities.map((name) => h('option', { value: name, text: name, selected: s.cityName === name })));
+    const customShown = s.useCustomCity || customPending;
+    const city = h('select', {
+      'aria-label': 'City',
+      onchange: async (e) => {
+        if (e.target.value === CUSTOM_VALUE) {
+          customPending = true;
+          if (s.customCity) { await save({ useCustomCity: true }); await WW.refreshCity(); } // the one typed in before
+          WW.renderSettings();
+          return;
+        }
+        customPending = false;
+        await save({ useCustomCity: false, cityName: e.target.value });
+        await WW.refreshCity();
+        WW.renderSettings();
+      },
+    },
+    [...WW.state.cities.map((name) => h('option', { value: name, text: name, selected: !customShown && s.cityName === name })),
+      h('option', { value: CUSTOM_VALUE, text: 'Custom city…', selected: customShown })]);
+    const customPanel = customShown ? customCityPanel(s) : null;
     const method = h('select', { 'aria-label': 'Calculation method', onchange: (e) => save({ method: e.target.value }) },
       WW.state.methods.map((m) => h('option', { value: m.key, text: m.label, selected: s.method === m.key })));
     const adjustments = h('div', { class: 'row' },
@@ -310,7 +369,7 @@
 
       section('Prayer Times',
         h('div', { class: 'settings-grid' },
-          row('City', city),
+          row('City', h('div', {}, city, customPanel)),
           row('Calculation method', method),
           row('Manual adjustment', h('div', {}, adjustments, h('p', { class: 'hint', text: 'Minutes added to the calculated time (negative = earlier).' }))),
           row('Hijri date', hijri))),
@@ -342,7 +401,7 @@
           row('Start with Windows', toggle('Start WaqtWise when Windows starts (in the tray)', s.startWithWindows, (v) => save({ startWithWindows: v }))),
           row('Background message', toggle('Show the "still running in the background" message', s.showBackgroundMessage, (v) => save({ showBackgroundMessage: v }), 'Shown once, the next time the window is closed. Closing the window keeps WaqtWise running in the tray so reminders keep working.')),
           row('Theme', theme),
-          row('First day of the week', h('div', {}, weekStart, h('p', { class: 'hint', text: 'The day cards at the top of the Daily View and the weeks in Statistics start from this day.' }))),
+          row('First day of the week', h('div', {}, weekStart, h('p', { class: 'hint', text: 'The day cards at the top of the Daily View and the weeks in Statistics start from this day.' }), h('p', { class: 'hint', text: 'Careful: tasks that repeat every 2 or more weeks also count their weeks from this day, so changing it can move them to other weeks.' }))),
           row('Working days', h('div', {}, workingDays, h('p', { class: 'hint', text: 'Used by "last working day" repeat rules.' }))))),
 
       alertSection(),

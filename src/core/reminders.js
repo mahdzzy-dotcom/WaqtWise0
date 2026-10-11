@@ -8,7 +8,8 @@
 // the calculation method or a prayer adjustment is picked up automatically the next time
 // the schedule is calculated.
 
-const { addMinutes, addDaysToKey, dateKey, formatTime12, formatDuration } = require('./time');
+const { addMinutes, addDaysToKey, dateKey, formatTime12, formatTime12InZone, formatDuration } = require('./time');
+const { resolveCity } = require('./cities');
 const { PRAYERS, ZONE_NAMES, deriveZone } = require('./zones');
 const { getOccurrences } = require('./tasks');
 
@@ -58,6 +59,10 @@ function remindersInWindow(provider, tasks, fromMs, toMs, settings, options = {}
   if (settings && settings.workingDays && !options.workingDays) {
     options = { ...options, workingDays: settings.workingDays };
   }
+  // "Every N weeks" counts weeks from the first day of the week chosen in Settings.
+  if (settings && [6, 0, 1].includes(settings.weekStart) && options.weekStartsOn === undefined) {
+    options = { ...options, weekStartsOn: settings.weekStart };
+  }
   options = { ...options, tasks }; // lets tasks that follow other tasks find them
   const margin = Math.ceil(largestOffsetMinutes(tasks, settings) / 1440);
   const fromKey = addDaysToKey(dateKey(new Date(fromMs)), -2);
@@ -100,6 +105,10 @@ function remindersInWindow(provider, tasks, fromMs, toMs, settings, options = {}
 function alertsInWindow(provider, tasks, fromMs, toMs, settings, options = {}) {
   if (settings && settings.workingDays && !options.workingDays) {
     options = { ...options, workingDays: settings.workingDays };
+  }
+  // "Every N weeks" counts weeks from the first day of the week chosen in Settings.
+  if (settings && [6, 0, 1].includes(settings.weekStart) && options.weekStartsOn === undefined) {
+    options = { ...options, weekStartsOn: settings.weekStart };
   }
   options = { ...options, tasks };
   const fromKey = addDaysToKey(dateKey(new Date(fromMs)), -2);
@@ -194,7 +203,8 @@ function formatTaskNotification(item, minutesUntilStart, settings) {
 
 function formatZoneNotification(event, settings) {
   const s = withDefaults(settings);
-  const line = `Until ${formatTime12(event.zoneEnd)}`;
+  const { timeZone } = resolveCity(settings); // a custom city shows its own time zone
+  const line = `Until ${timeZone ? formatTime12InZone(event.zoneEnd, timeZone) : formatTime12(event.zoneEnd)}`;
   return {
     kind: 'zone',
     id: event.id,
