@@ -1,0 +1,22 @@
+name: Generate lockfile
+
+# Manual, one-time (or whenever package.json changes): Actions -> Generate lockfile -> Run workflow.
+# Then download package-lock.json from the run's Artifacts and commit it to the repository.
+on:
+  workflow_dispatch:
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate package-lock.json
+        shell: bash
+        run: npm install --package-lock-only
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json

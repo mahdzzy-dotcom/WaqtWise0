@@ -1,0 +1,20 @@
+name: Run tests
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        shell: bash
+        # npm ci installs exactly what package-lock.json lists; without the file yet, fall back to npm install
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Run tests
+        run: npm test
