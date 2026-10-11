@@ -1,1 +1,25 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Local data and backups made while testing
+*.bak
+*.tmp
+*.damaged-*
+data.json
+
+# Screenshots made by tools/ui-check.js (SHOT_DIR)
+shots/
+screenshots/
+undefined/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
