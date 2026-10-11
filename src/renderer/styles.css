@@ -589,3 +589,8 @@ input.onoff:checked ~ .onoff-state { color: var(--accent); }
 .manage-name { flex: 1; min-width: 0; }
 .manage-name .hint { margin: 2px 0 0; }
 .manage-btns { display: flex; gap: 6px; flex: none; }
+
+/* Restore from backup */
+.backup-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.backup-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.backup-info { display: flex; flex-direction: column; gap: 2px; }

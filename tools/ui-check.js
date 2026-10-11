@@ -535,6 +535,16 @@ async function setTime(page, hour, minute, ampm) {
     assert.deepEqual(titles, ['Prayer Times', 'Reminders & Notifications', 'Application', 'Full-screen reminder', 'Sounds', 'Categories', 'Data']);
     await shot(page, 'settings');
   });
+  await step('Restore from backup lists the saved copies and closes with Esc', async () => {
+    service.store.backupNow('before-import');
+    await page.click('button:has-text("Restore from backup")');
+    await page.waitForSelector('.backup-row');
+    assert.match(await page.textContent('.backup-row'), /Before an import/);
+    assert.equal(await page.isVisible('.backup-row button:has-text("Restore")'), true);
+    await shot(page, 'restore-backup');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.backup-row', { state: 'detached' });
+  });
   await step('prayer adjustment is saved and moves the zone boundary', async () => {
     await page.fill('input[aria-label="Asr adjustment in minutes"]', '5');
     await page.press('input[aria-label="Asr adjustment in minutes"]', 'Enter');

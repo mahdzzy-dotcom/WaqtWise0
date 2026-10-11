@@ -418,6 +418,51 @@
     }
   };
 
+  // ---- Restore from a saved copy -----------------------------------------------------------------------------------
+
+  const BACKUP_KIND = { daily: 'Daily copy', 'before-import': 'Before an import', 'before-restore': 'Before a restore' };
+
+  WW.restoreBackup = async function restoreBackup() {
+    let list;
+    try {
+      list = await WW.call('listBackups');
+    } catch (error) {
+      WW.toast(error.message, 'error');
+      return;
+    }
+    const dlg = WW.openDialog({ title: 'Restore from backup' });
+    dlg.body.appendChild(h('p', { class: 'dialog-message', text: 'WaqtWise keeps a copy of your data every day (last 7 days) and one before every import or restore. Restoring replaces all tasks, categories and settings with the chosen copy. Your current data is saved first, so you can undo it from this same list.' }));
+    if (!list.length) {
+      dlg.body.appendChild(h('p', { class: 'hint', text: 'No saved copies yet. The first one is made automatically today.' }));
+    }
+    const box = h('div', { class: 'backup-list' });
+    list.forEach((b) => {
+      const when = b.time ? `${b.date}  ${b.time}` : b.date;
+      box.appendChild(h('div', { class: 'backup-row' },
+        h('div', { class: 'backup-info' },
+          h('strong', { text: when }),
+          h('span', { class: 'hint', text: `${BACKUP_KIND[b.kind] || b.kind} · ${b.tasks} task${b.tasks === 1 ? '' : 's'}` })),
+        h('button', { class: 'btn', text: 'Restore', 'aria-label': `Restore the copy from ${when}`, onclick: async () => {
+          const go = await WW.ask({
+            title: 'Restore this copy?',
+            message: `All tasks, categories and settings will be replaced with the copy from ${when} (${b.tasks} task${b.tasks === 1 ? '' : 's'}).`,
+            choices: [{ label: 'Cancel', value: false }, { label: 'Restore', value: true, kind: 'primary' }],
+          });
+          if (!go) return;
+          try {
+            const result = await WW.call('restoreBackup', { id: b.id });
+            dlg.close();
+            await reloadEverything();
+            WW.toast(`Restored ${result.tasks} task(s)`);
+          } catch (error) {
+            WW.toast(error.message, 'error');
+          }
+        } })));
+    });
+    dlg.body.appendChild(box);
+    dlg.footer.appendChild(h('button', { class: 'btn', text: 'Close', onclick: () => dlg.close() }));
+  };
+
   async function reloadEverything() {
     const boot = await WW.call('bootstrap');
     Object.assign(WW.state, { settings: boot.settings, categories: boot.categories, cities: boot.cities, methods: boot.methods, todayKey: boot.currentPlanningDayKey });

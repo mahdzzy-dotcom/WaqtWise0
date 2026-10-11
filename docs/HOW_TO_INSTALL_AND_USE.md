@@ -72,6 +72,14 @@ presses right when it appears are ignored on purpose, so typing cannot close it 
 
 Run the newer installer. Your tasks and settings are kept.
 
+## Backups and statistics history
+
+- WaqtWise keeps its own copies automatically in a `backups` folder next to your data: one per day (the last 7 days)
+  and one just before every import or restore (the last 5 of each).
+- To go back: Settings -> Data -> **Restore from backup…**, pick a copy and click **Restore**. The data you had
+  just before is saved first, so a restore can be undone from the same list.
+- Statistics of days that are over are saved, so editing or deleting a task later does not change the past.
+
 ## 8. Uninstall
 
 Settings -> Apps -> WaqtWise -> Uninstall. The uninstaller asks whether to delete your data too: choose
@@ -82,7 +90,7 @@ Settings -> Apps -> WaqtWise -> Uninstall. The uninstaller asks whether to delet
 | Problem | What to try |
 | --- | --- |
 | No notifications appear | Click **Send a test notification** in Settings. If nothing shows: Windows Settings -> System -> Notifications, make sure notifications are on and "WaqtWise" is allowed; turn off Focus assist / Do not disturb. |
-| The notification buttons do nothing | Tell the person who built the app; this needs a fix on our side. |
+| Clicking a notification does not open WaqtWise | Tell the person who built the app; this needs a fix on our side. |
 | The full-screen alert does not appear over a game or video | Programs running in exclusive full-screen can hide every other window. Try the program's windowed or borderless full-screen mode. |
 | The window disappeared | It is in the tray. Click the tray icon. |
 | Prayer times look wrong | Check the city and the calculation method in Settings, then add minutes of adjustment for the prayer that differs. |

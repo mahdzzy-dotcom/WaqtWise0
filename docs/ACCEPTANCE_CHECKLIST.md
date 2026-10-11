@@ -72,4 +72,7 @@ Do these once after installing. They are the parts that cannot be tested without
 16. **Two screens** (if you have them): the reminder covers both. Choose "Main screen only" and check that only one is covered.
 17. **Limit check** (optional): start a video or game in full screen and see whether the reminder appears over it; some exclusive full-screen programs do not allow it.
 
+18. **Backups**: Settings -> Data -> **Restore from backup…** lists today's copy. Import a backup file: a "Before an import" copy appears; restore it and your previous tasks come back.
+19. **Past statistics**: complete a task, wait for the next day (or change the computer date), then delete that task: the finished day in Statistics keeps its numbers.
+
 If any of these fails, note which number and what you saw, and send it back.

@@ -63,3 +63,9 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
 - `settings` contains `fullScreenAlerts`, `fullScreenDefaultForNewTasks`, `alertScreens` (`"all"` or `"main"`) and
   `alertAppearance` (colors as `#rrggbb`, `fontFamily`, `alignment`, and the groups `name`, `notes` and `show`).
   Missing or invalid values are replaced by the defaults when a backup is imported.
+
+## Saved data file (not the export file)
+
+`data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone], ...] } }`,
+the saved statistics of finished days. It is not part of the export file. Automatic copies of `data.json` are kept
+in the `backups` folder next to it (`data-YYYY-MM-DD.json`, `before-import-*.json`, `before-restore-*.json`).

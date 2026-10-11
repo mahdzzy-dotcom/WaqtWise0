@@ -5,7 +5,8 @@
 // What counts: a task occurrence is "counted" once it is done OR its end time has passed. A task that is
 // still to come today is not counted, so "78% done" never includes things that were never due yet.
 // Occurrences are filed under the Planning Day (and zone) that contains their START, like the Daily View.
-// Numbers are worked out from the tasks as they are NOW: editing or deleting a task changes its history.
+// Days that are over are saved as snapshots (see snapshotDays), so editing or deleting a task later does not
+// change them. Today and the days not yet snapshotted are worked out from the tasks as they are now.
 //
 // computeStats(...) returns plain data (text, numbers, lists) for the window to draw.
 
@@ -156,6 +157,30 @@ function collectDays(provider, tasks, options, fromKey, toKey, nowMs) {
   return days;
 }
 
+// ---- daily snapshots --------------------------------------------------------------------------
+// Once a Planning Day is over, its counted occurrences are saved ("frozen") so later edits or deletions of
+// tasks do not rewrite history. An entry is stored as a short list to keep the data file small.
+
+function packEntry(e) {
+  return [e.taskId, e.dateKey, e.title, e.categoryId, e.minutes, e.done ? 1 : 0, e.startMs, e.zone];
+}
+
+function unpackEntry(a, key) {
+  return {
+    taskId: a[0], dateKey: a[1], key, title: a[2], categoryId: a[3], minutes: a[4], done: a[5] === 1, startMs: a[6], zone: a[7],
+  };
+}
+
+// Work out the counted occurrences of every Planning Day from fromKey to toKey. Returns { key: [packed entries] }
+// (days without counted occurrences are left out).
+function snapshotDays(provider, tasks, options, fromKey, toKey, now) {
+  const out = {};
+  if (toKey < fromKey) return out;
+  const days = collectDays(provider, tasks, options || {}, fromKey, toKey, now.getTime());
+  for (const [key, list] of days) out[key] = list.map(packEntry);
+  return out;
+}
+
 // ---- small calculations ---------------------------------------------------------------------
 
 function totals(list) {
@@ -169,12 +194,21 @@ const percentOf = (t) => (t.total ? Math.round((t.done / t.total) * 100) : null)
 // ---- the whole picture ------------------------------------------------------------------------
 
 // args: { provider, tasks, categories, options, now, query }
-function computeStats({ provider, tasks, categories, options, now, query, weekStart = 0 }) {
+function computeStats({ provider, tasks, categories, options, now, query, weekStart = 0, frozen = null }) {
   const nowMs = now.getTime();
   const todayKey = currentPlanningDayKey(provider, now);
   const earliestKey = earliestDay(tasks, todayKey);
   const r = resolveRange(query, todayKey, weekStart);
   const days = collectDays(provider, tasks, options || {}, earliestKey < r.prevStart ? earliestKey : r.prevStart, todayKey, nowMs);
+
+  // Days that are over are read from their saved snapshot instead of being worked out again.
+  if (frozen && frozen.days) {
+    const through = frozen.through || '';
+    for (const key of Object.keys(frozen.days)) {
+      if (key > through || key >= todayKey) continue;
+      days.set(key, frozen.days[key].map((a) => unpackEntry(a, key)));
+    }
+  }
 
   const listFor = (from, to) => {
     const out = [];
@@ -395,4 +429,4 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
   };
 }
 
-module.exports = { RANGES, STREAK_GOAL, resolveRange, rangeLabel, neighbours, earliestDay, collectDays, computeStats };
+module.exports = { RANGES, STREAK_GOAL, resolveRange, rangeLabel, neighbours, earliestDay, collectDays, computeStats, snapshotDays, packEntry, unpackEntry, MAX_HISTORY_DAYS };

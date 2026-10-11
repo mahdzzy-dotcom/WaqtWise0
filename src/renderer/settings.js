@@ -355,7 +355,9 @@
         h('p', { class: 'dialog-message', text: 'Your data is stored only on this computer. Export a backup file to keep it safe or to move it to another computer.' }),
         h('div', { class: 'row' },
           h('button', { class: 'btn', text: 'Export data…', onclick: () => WW.exportData() }),
-          h('button', { class: 'btn', text: 'Import data…', onclick: () => WW.importData() })))
+          h('button', { class: 'btn', text: 'Import data…', onclick: () => WW.importData() }),
+          h('button', { class: 'btn', text: 'Restore from backup…', onclick: () => WW.restoreBackup() })),
+        h('p', { class: 'hint', text: 'WaqtWise also keeps its own copies automatically: one per day for the last 7 days, and one before every import.' }))
     );
   };
 })();
