@@ -12,6 +12,7 @@
 //
 // Derived values (zones, end times, durations, occurrences, prayer times) are never saved.
 
+const { t } = require('./i18n');
 const { DEFAULT_SETTINGS, sanitizeSettings } = require('./settings');
 const { validateTask } = require('./tasks');
 const { normalizeRule } = require('./recurrence');
@@ -30,6 +31,12 @@ function defaultCategories() {
     { id: 'cat-personal', name: 'Personal', color: '#f59e0b' },
     { id: 'cat-health', name: 'Health', color: '#ef4444' },
   ];
+}
+
+// The built-in categories are shown in the language of the app; a category the user renamed keeps their name.
+const DEFAULT_CATEGORY_NAMES = { 'cat-work': 'Work', 'cat-study': 'Study', 'cat-worship': 'Worship', 'cat-personal': 'Personal', 'cat-health': 'Health' };
+function localCategoryName(category) {
+  return DEFAULT_CATEGORY_NAMES[category.id] === category.name ? t(category.name) : category.name;
 }
 
 function emptyData() {
@@ -59,7 +66,7 @@ function normalizeCategories(raw, warnings) {
       typeof c.name === 'string' && c.name.trim() !== '' &&
       typeof c.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(c.color);
     if (!valid || seen.has(c.id)) {
-      warnings.push('A category was skipped because it was not valid');
+      warnings.push(t('A category was skipped because it was not valid'));
       continue;
     }
     seen.add(c.id);
@@ -132,13 +139,13 @@ function normalizeData(raw) {
   const ids = new Set();
   for (const rawTask of Array.isArray(source.tasks) ? source.tasks : []) {
     const { task, error } = normalizeTask(rawTask);
-    const label = isPlainObject(rawTask) && rawTask.title ? `"${rawTask.title}"` : 'A task';
+    const label = isPlainObject(rawTask) && rawTask.title ? `"${rawTask.title}"` : t('A task');
     if (error) {
-      warnings.push(`${label} was skipped: ${error}`);
+      warnings.push(t('{label} was skipped: {error}', { label, error }));
       continue;
     }
     if (ids.has(task.id)) {
-      warnings.push(`${label} was skipped because its id is used twice`);
+      warnings.push(t('{label} was skipped because its id is used twice', { label }));
       continue;
     }
     ids.add(task.id);
@@ -187,17 +194,17 @@ function parseImport(input) {
     try {
       parsed = JSON.parse(input);
     } catch (error) {
-      throw new Error('This file is not a WaqtWise backup (it could not be read).');
+      throw new Error(t('This file is not a WaqtWise backup (it could not be read).'));
     }
   }
   if (!isPlainObject(parsed) || parsed.app !== APP_NAME) {
-    throw new Error('This file is not a WaqtWise backup.');
+    throw new Error(t('This file is not a WaqtWise backup.'));
   }
   if (!Number.isInteger(parsed.formatVersion) || parsed.formatVersion < 1) {
-    throw new Error('This backup file has no valid version number.');
+    throw new Error(t('This backup file has no valid version number.'));
   }
   if (parsed.formatVersion > FORMAT_VERSION) {
-    throw new Error('This backup was made by a newer version of WaqtWise. Please update the app first.');
+    throw new Error(t('This backup was made by a newer version of WaqtWise. Please update the app first.'));
   }
   // Future versions: convert older formats here, one step at a time.
   return normalizeData(parsed);
@@ -208,6 +215,7 @@ module.exports = {
   FORMAT_VERSION,
   DATA_VERSION,
   defaultCategories,
+  localCategoryName,
   emptyData,
   normalizeData,
   buildExport,

@@ -78,4 +78,6 @@ Do these once after installing. They are the parts that cannot be tested without
 20. **Custom city**: Settings -> City -> Custom city…, enter a city with its coordinates and time zone, Save city: the zone times in the Daily View change. Choose Cairo again: they go back.
 21. **Every 2 weeks**: a task repeating every 2 weeks on Sunday and Monday; change the first day of the week to Monday in Settings and see that its weeks shift.
 
+22. **Arabic**: Settings -> Language / اللغة -> العربية. The whole app turns right to left at once (menu, forms, Statistics, the notification texts). Numbers stay 0123456789. Open a task form, Statistics and a full-screen reminder (Settings -> Preview full screen) and look for any English left over. Switch back to English: everything returns as before.
+
 If any of these fails, note which number and what you saw, and send it back.

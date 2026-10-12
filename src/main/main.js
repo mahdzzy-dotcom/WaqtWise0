@@ -11,6 +11,8 @@
 //   - Only one copy runs; launching it again brings the running copy forward.
 //   - Reminders come from the engine in this process, so they do not depend on the window.
 
+const { t } = require('../core/i18n');
+require('../core/i18n-ar');
 const path = require('path');
 const fs = require('fs');
 const {
@@ -176,14 +178,12 @@ async function announceBackgroundRunning() {
   const result = await dialog.showMessageBox({
     type: 'info',
     title: 'WaqtWise',
-    message: 'WaqtWise is still running in the background.',
-    detail:
-      'It stays in the system tray (the icons near the clock) so your reminders keep working. ' +
-      'To close it completely, right-click its tray icon and choose Exit.',
-    buttons: ['OK'],
+    message: t('WaqtWise is still running in the background.'),
+    detail: t('It stays in the system tray (the icons near the clock) so your reminders keep working. To close it completely, right-click its tray icon and choose Exit.'),
+    buttons: [t('OK')],
     defaultId: 0,
     noLink: true,
-    checkboxLabel: "Don't show this again",
+    checkboxLabel: t("Don't show this again"),
     checkboxChecked: false,
   });
   if (result.checkboxChecked) service.saveSettings({ showBackgroundMessage: false });
@@ -194,10 +194,10 @@ async function announceBackgroundRunning() {
 async function confirmExit() {
   const result = await dialog.showMessageBox({
     type: 'question',
-    title: 'Exit WaqtWise',
-    message: 'Exit WaqtWise?',
-    detail: 'Reminders and notifications will stop until you start WaqtWise again.',
-    buttons: ['Exit', 'Cancel'],
+    title: t('Exit WaqtWise'),
+    message: t('Exit WaqtWise?'),
+    detail: t('Reminders and notifications will stop until you start WaqtWise again.'),
+    buttons: [t('Exit'), t('Cancel')],
     defaultId: 1,
     cancelId: 1,
     noLink: true,
@@ -213,9 +213,9 @@ async function confirmExit() {
 // To add a tray menu item later, add one line here.
 function trayActions() {
   return [
-    { id: 'open', label: 'Open / Show', click: showWindow },
-    { id: 'hide', label: 'Hide / Minimize', click: hideWindow },
-    { id: 'exit', label: 'Exit', separatorBefore: true, click: confirmExit },
+    { id: 'open', label: t('Open / Show'), click: showWindow },
+    { id: 'hide', label: t('Hide / Minimize'), click: hideWindow },
+    { id: 'exit', label: t('Exit'), separatorBefore: true, click: confirmExit },
   ];
 }
 
@@ -253,7 +253,7 @@ function startAlerts() {
       if (real.length === 0) return;
       service.addMissed(real.map((i) => ({ ...i, start: new Date(i.startMs), alreadyStarted: true })));
       sendToWindow('missed', real.map((i) => ({
-        taskId: i.taskId, dateKey: i.dateKey, title: i.title, startLabel: i.startLabel, zoneName: i.zoneName, alreadyStarted: true,
+        taskId: i.taskId, dateKey: i.dateKey, title: i.title, startLabel: i.startLabel, zoneName: t(i.zoneName), alreadyStarted: true,
       })));
     },
     log,
@@ -294,7 +294,7 @@ function startEngine() {
         dateKey: i.dateKey,
         title: i.title,
         startLabel: formatTime12(i.start),
-        zoneName: i.zoneName,
+        zoneName: t(i.zoneName),
         alreadyStarted: i.alreadyStarted,
       })));
     },
@@ -342,16 +342,16 @@ function applyStartWithWindows(settings) {
 
 function registerIpc() {
   ipcMain.handle('svc', async (event, method, args) => {
-    if (!PUBLIC_METHODS.includes(method)) throw new Error('Unknown request.');
+    if (!PUBLIC_METHODS.includes(method)) throw new Error(t('Unknown request.'));
     return service[method](...(Array.isArray(args) ? args : []));
   });
 
   ipcMain.handle('export-data', async () => {
     const stamp = new Date().toISOString().slice(0, 10);
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Export data',
+      title: t('Export data'),
       defaultPath: `waqtwise-backup-${stamp}.json`,
-      filters: [{ name: 'WaqtWise backup', extensions: ['json'] }],
+      filters: [{ name: t('WaqtWise backup'), extensions: ['json'] }],
     });
     if (result.canceled || !result.filePath) return { canceled: true };
     fs.writeFileSync(result.filePath, JSON.stringify(service.exportData(), null, 2), 'utf8');
@@ -360,9 +360,9 @@ function registerIpc() {
 
   ipcMain.handle('import-data', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Import data',
+      title: t('Import data'),
       properties: ['openFile'],
-      filters: [{ name: 'WaqtWise backup', extensions: ['json'] }],
+      filters: [{ name: t('WaqtWise backup'), extensions: ['json'] }],
     });
     if (result.canceled || result.filePaths.length === 0) return { canceled: true };
     const text = fs.readFileSync(result.filePaths[0], 'utf8');
@@ -374,8 +374,8 @@ function registerIpc() {
     notify({
       kind: 'task',
       id: `test-${Date.now()}`,
-      title: 'WaqtWise test notification',
-      lines: ['If you can see this, notifications work.', 'Click it to open WaqtWise.'],
+      title: t('WaqtWise test notification'),
+      lines: [t('If you can see this, notifications work.'), t('Click it to open WaqtWise.')],
       silent: !settings.soundEnabled,
       taskId: null,
       dateKey: null,
@@ -427,7 +427,7 @@ function start() {
         sendToWindow('data-changed');
         if (engine) engine.reschedule(); // tasks or settings changed: re-aim the exact-time timer
       },
-      onSettingsChanged: (settings) => { applyStartWithWindows(settings); applyTitleBarTheme(); },
+      onSettingsChanged: (settings) => { applyStartWithWindows(settings); applyTitleBarTheme(); if (trayController) trayController.setActions(trayActions()); },
     });
     registerIpc();
     if (app.isPackaged) app.setAsDefaultProtocolClient(PROTOCOL);

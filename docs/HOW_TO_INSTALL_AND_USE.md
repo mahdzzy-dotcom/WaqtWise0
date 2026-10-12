@@ -107,3 +107,7 @@ Settings -> Apps -> WaqtWise -> Uninstall. The uninstaller asks whether to delet
 | The window disappeared | It is in the tray. Click the tray icon. |
 | Prayer times look wrong | Check the city and the calculation method in Settings, then add minutes of adjustment for the prayer that differs. |
 | A task shows "Backup start time" | It starts relative to another task that is not on that day. Change the task it follows, or accept the backup time you chose. |
+
+## Language
+
+Settings -> **Language / اللغة**: English or العربية. The change is immediate and kept for next time. Your own text (task names, notes, category names you made) is never translated.

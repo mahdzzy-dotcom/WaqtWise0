@@ -68,6 +68,8 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
 
 `settings.useCustomCity` (true/false) and `settings.customCity` (`null` or `{ "name", "latitude", "longitude", "timeZone" }`,
 the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is dropped when a backup is imported.
+`settings.language` (`"en"` or `"ar"`) is the language of the app. Task titles, notes and category names you typed are never translated; the built-in category names, zone names and all other texts are translated when shown.
+
 `settings.weekStart` (6, 0 or 1) is also used to count the weeks of tasks that repeat every 2 or more weeks.
 
 ## Saved data file (not the export file)

@@ -3,6 +3,8 @@
 // Small, dependency-free time helpers. All dates are local-time JavaScript Dates.
 // A "date key" is a plain calendar date string like "2026-10-04".
 
+const { t, monthShort } = require('./i18n');
+
 const MS_PER_MINUTE = 60000;
 
 function pad(n) {
@@ -66,7 +68,7 @@ function daysInMonth(year, month) {
 // "Oct 1", or "Oct 1, 2027" when withYear is true
 function formatKeyShort(key, withYear = false) {
   const { y, m, d } = splitKey(key);
-  return withYear ? `${MONTH_SHORT[m - 1]} ${d}, ${y}` : `${MONTH_SHORT[m - 1]} ${d}`;
+  return withYear ? t('{month} {day}, {year}', { month: monthShort(m - 1), day: d, year: y }) : t('{month} {day}', { month: monthShort(m - 1), day: d });
 }
 
 function addMinutes(date, minutes) {
@@ -82,14 +84,14 @@ function formatDuration(totalMinutes) {
   const m = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return h > 0 ? `${h}h ${r}m` : `${r}m`;
+  return h > 0 ? t('{h}h {m}m', { h, m: r }) : t('{m}m', { m: r });
 }
 
 // 12-hour clock with AM/PM, no seconds: "5:05 AM", "12:00 PM", "12:20 AM"
 function formatTime12(date) {
   const hours24 = date.getHours();
   const minutes = date.getMinutes();
-  const suffix = hours24 >= 12 ? 'PM' : 'AM';
+  const suffix = t(hours24 >= 12 ? 'PM' : 'AM');
   let hours12 = hours24 % 12;
   if (hours12 === 0) hours12 = 12;
   return `${hours12}:${pad(minutes)} ${suffix}`;
@@ -106,7 +108,7 @@ function formatTime12InZone(date, timeZone) {
   }
   const parts = formatter.formatToParts(date);
   const get = (type) => (parts.find((p) => p.type === type) || { value: '' }).value;
-  return `${get('hour')}:${get('minute')} ${get('dayPeriod').toUpperCase()}`;
+  return `${get('hour')}:${get('minute')} ${t(get('dayPeriod').toUpperCase())}`;
 }
 
 module.exports = {

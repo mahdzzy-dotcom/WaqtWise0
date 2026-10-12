@@ -3,10 +3,11 @@
 // Missed reminders (the bell) and the full-screen alert.
 // These methods are added to PlannerService (see ../service.js); `this` is the service.
 
+const { t } = require('../../core/i18n');
 const core = require('../../core');
 
 const {
-  ALERT_PRESETS, addDaysToKey, dateKey, formatTime12, formatDuration, formatKeyShort,
+  ALERT_PRESETS, localCategoryName, addDaysToKey, dateKey, formatTime12, formatDuration, formatKeyShort,
 } = core;
 const { copy } = require('./util');
 
@@ -56,14 +57,14 @@ class MissedAlertMethods {
       .sort((a, b) => b.startMs - a.startMs)
       .map((m) => {
         const k = dateKey(new Date(m.startMs));
-        const day = k === todayKey ? 'Today' : k === yesterdayKey ? 'Yesterday' : formatKeyShort(k);
+        const day = k === todayKey ? t('Today') : k === yesterdayKey ? t('Yesterday') : formatKeyShort(k);
         return {
           taskId: m.taskId,
           dateKey: m.dateKey,
           title: m.title,
-          whenLabel: `${day}, ${formatTime12(new Date(m.startMs))}`,
+          whenLabel: `${day}${t(', ')}${formatTime12(new Date(m.startMs))}`,
           startLabel: formatTime12(new Date(m.startMs)),
-          zoneName: m.zoneName,
+          zoneName: t(m.zoneName),
           alreadyStarted: m.alreadyStarted,
         };
       });
@@ -97,9 +98,9 @@ class MissedAlertMethods {
         startLabel: formatTime12(i.start),
         endLabel: formatTime12(i.end),
         durationLabel: formatDuration(i.durationMinutes),
-        zoneName: i.zoneName,
+        zoneName: t(i.zoneName),
         zoneIndex: i.zoneIndex,
-        categoryName: category ? category.name : '',
+        categoryName: category ? localCategoryName(category) : '',
         categoryColor: category ? category.color : '',
         priority: i.priority,
         snoozed: Boolean(i.snoozed),
@@ -113,6 +114,7 @@ class MissedAlertMethods {
     return {
       appearance: copy(s.alertAppearance),
       screens: s.alertScreens,
+      language: s.language,
       snoozeMinutes: s.snoozeMinutes,
       sound: { id: s.alertSound, volume: s.alertSoundVolume, repeat: s.alertSoundRepeat },
     };
@@ -121,7 +123,7 @@ class MissedAlertMethods {
   // One of the ready-made looks.
   getAlertPreset(key) {
     const preset = ALERT_PRESETS[key];
-    if (!preset) throw new Error('That look does not exist.');
+    if (!preset) throw new Error(t('That look does not exist.'));
     return copy(preset.appearance);
   }
 
@@ -132,14 +134,14 @@ class MissedAlertMethods {
       id: `sample-${now.getTime()}`,
       taskId: '__sample__',
       dateKey: dateKey(now),
-      title: 'Study SQL: joins and subqueries',
-      notes: 'Open the exercises from yesterday.\nFinish chapter 4, then try the practice questions.',
+      title: t('Study SQL: joins and subqueries'),
+      notes: t('Open the exercises from yesterday.\nFinish chapter 4, then try the practice questions.'),
       startLabel: formatTime12(now),
       endLabel: formatTime12(new Date(now.getTime() + 45 * 60000)),
       durationLabel: '45m',
-      zoneName: 'Dhuhr → Asr',
+      zoneName: t('Dhuhr → Asr'),
       zoneIndex: 2,
-      categoryName: 'Study',
+      categoryName: t('Study'),
       categoryColor: '#8b5cf6',
       priority: 'High',
       snoozed: false,

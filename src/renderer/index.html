@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WaqtWise</title>
+  <title data-t>WaqtWise</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="alert.css">
 </head>
 <body>
-  <div id="splash" class="splash" role="img" aria-label="WaqtWise. Make every waqt count, wisely.">
+  <div id="splash" class="splash" role="img" aria-label="WaqtWise. Make every waqt count, wisely." data-t-label>
     <img class="splash-logo" src="logo-large.png" alt="">
     <div class="splash-title">WaqtWise</div>
-    <p class="splash-slogan">Make every waqt count, wisely.</p>
+    <p class="splash-slogan" data-t>Make every waqt count, wisely.</p>
     <div class="splash-strip" aria-hidden="true">
       <div class="z1"></div><div class="z2"></div><div class="z3"></div><div class="z4"></div><div class="z5"></div>
     </div>
@@ -25,12 +25,12 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <button id="menu-btn" class="icon-btn" title="Menu" aria-label="Menu" aria-expanded="false"></button>
+      <button id="menu-btn" class="icon-btn" title="Menu" aria-label="Menu" data-t-title data-t-label aria-expanded="false"></button>
     </div>
     <div class="topbar-right">
-      <button id="theme-btn" class="icon-btn" title="Switch theme" aria-label="Switch theme"></button>
+      <button id="theme-btn" class="icon-btn" title="Switch theme" aria-label="Switch theme" data-t-title data-t-label></button>
       <div class="bell-wrap">
-        <button id="bell-btn" class="icon-btn bell-empty" title="No missed reminders" aria-label="No missed reminders"></button>
+        <button id="bell-btn" class="icon-btn bell-empty" title="No missed reminders" aria-label="No missed reminders" data-t-title data-t-label></button>
         <div id="bell-panel" class="popover" hidden></div>
       </div>
       <button id="add-btn" class="btn primary tall"></button>
@@ -38,13 +38,15 @@
   </header>
 
   <div id="scrim" class="scrim" hidden></div>
-  <nav id="drawer" class="drawer" aria-label="Main menu" hidden></nav>
+  <nav id="drawer" class="drawer" aria-label="Main menu" data-t-label hidden></nav>
 
   <main id="view"></main>
 
   <div id="dialog-root"></div>
   <div id="toast-root" aria-live="polite"></div>
 
+  <script src="../core/i18n.js"></script>
+  <script src="../core/i18n-ar.js"></script>
   <script src="dom.js"></script>
   <script src="sounds.js"></script>
   <script src="alert-view.js"></script>

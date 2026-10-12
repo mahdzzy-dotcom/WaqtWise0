@@ -3,6 +3,7 @@
 // Settings and categories.
 // These methods are added to PlannerService (see ../service.js); `this` is the service.
 
+const { t } = require('../../core/i18n');
 const core = require('../../core');
 
 const {
@@ -24,6 +25,7 @@ class SettingsMethods {
     // Turning the "still running in the background" message back on shows it again at the next close.
     if (patch.showBackgroundMessage === true && !previous.showBackgroundMessage) merged.backgroundMessageShown = false;
     this.data.settings = merged;
+    this.applyLanguage();
     this.providerCache = null;
     this.persist();
     this.onSettingsChanged(copy(this.data.settings));
@@ -33,12 +35,12 @@ class SettingsMethods {
 
   validateCategory({ name, color }, ignoreId) {
     const clean = String(name || '').trim();
-    if (clean === '') throw new Error('Please enter a category name.');
-    if (clean.length > 40) throw new Error('Category names can be up to 40 characters.');
+    if (clean === '') throw new Error(t('Please enter a category name.'));
+    if (clean.length > 40) throw new Error(t('Category names can be up to 40 characters.'));
     if (this.data.categories.some((c) => c.id !== ignoreId && c.name.toLowerCase() === clean.toLowerCase())) {
-      throw new Error('There is already a category with that name.');
+      throw new Error(t('There is already a category with that name.'));
     }
-    if (!/^#[0-9a-fA-F]{6}$/.test(color || '')) throw new Error('Please choose a color.');
+    if (!/^#[0-9a-fA-F]{6}$/.test(color || '')) throw new Error(t('Please choose a color.'));
     return { name: clean, color };
   }
 
@@ -47,15 +49,15 @@ class SettingsMethods {
     const category = { id: `cat-${this.newId()}`, ...clean };
     this.data.categories.push(category);
     this.changed();
-    return copy(this.data.categories);
+    return this.categoriesForView();
   }
 
   updateCategory({ id, name, color }) {
     const category = this.categoryOf(id);
-    if (!category) throw new Error('That category no longer exists.');
+    if (!category) throw new Error(t('That category no longer exists.'));
     Object.assign(category, this.validateCategory({ name, color }, id));
     this.changed();
-    return copy(this.data.categories);
+    return this.categoriesForView();
   }
 
   // Deleting a category never deletes tasks: they simply become uncategorized.
@@ -68,7 +70,7 @@ class SettingsMethods {
       }
     }
     this.changed();
-    return copy(this.data.categories);
+    return this.categoriesForView();
   }
 }
 

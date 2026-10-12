@@ -6,6 +6,7 @@
 // Besides that, a "backups" folder next to the data file keeps one copy per day (the last 7 days), plus a copy
 // made just before every import or restore (the last 5 of each), which the user can restore from Settings.
 
+const { t } = require('../core/i18n');
 const fs = require('fs');
 const path = require('path');
 const { emptyData, normalizeData } = require('../core/data');
@@ -35,13 +36,13 @@ class FileStore {
       try {
         const { data, warnings } = normalizeData(this.readJson(file));
         this.loadNotes.push(...warnings);
-        if (label === 'backup') this.loadNotes.push('Your data file was damaged, so the last backup copy was loaded.');
+        if (label === 'backup') this.loadNotes.push(t('Your data file was damaged, so the last backup copy was loaded.'));
         return data;
       } catch (error) {
         if (label === 'main') this.setAsideDamagedFile();
       }
     }
-    this.loadNotes.push('Your data file could not be read, so the app started empty.');
+    this.loadNotes.push(t('Your data file could not be read, so the app started empty.'));
     return emptyData();
   }
 
@@ -137,13 +138,13 @@ class FileStore {
 
   // Returns { data, warnings } from a backup, or throws.
   readBackup(id) {
-    if (!describeBackupName(id).kind) throw new Error('This backup does not exist.');
+    if (!describeBackupName(id).kind) throw new Error(t('This backup does not exist.'));
     const file = path.join(this.backupDir, id);
-    if (!fs.existsSync(file)) throw new Error('This backup does not exist.');
+    if (!fs.existsSync(file)) throw new Error(t('This backup does not exist.'));
     try {
       return normalizeData(this.readJson(file));
     } catch (error) {
-      throw new Error('This backup file is damaged and cannot be restored.');
+      throw new Error(t('This backup file is damaged and cannot be restored.'));
     }
   }
 }
@@ -188,7 +189,7 @@ class MemoryStore {
 
   readBackup(id) {
     const found = this.backups.find((b) => b.id === id);
-    if (!found) throw new Error('This backup does not exist.');
+    if (!found) throw new Error(t('This backup does not exist.'));
     return normalizeData(JSON.parse(JSON.stringify(found.data)));
   }
 

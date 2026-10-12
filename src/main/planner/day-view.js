@@ -3,10 +3,11 @@
 // The Daily View, the week strip, Statistics and the upcoming-reminders list.
 // These methods are added to PlannerService (see ../service.js); `this` is the service.
 
+const { t, tp, getLanguage, weekdayShort, weekdayLong, monthLong } = require('../../core/i18n');
 const core = require('../../core');
 
 const {
-  occurrencesForPlanningDay, computeDayLayout, currentPlanningDayKey, remindersInWindow, reminderOffsets, computeStats, addDaysToKey, dateKey, formatTime12, formatDuration, formatKeyShort, weekdayOfKey, parseDateKey, isValidKey,
+  localCategoryName, occurrencesForPlanningDay, computeDayLayout, currentPlanningDayKey, remindersInWindow, reminderOffsets, computeStats, addDaysToKey, dateKey, formatTime12, formatDuration, formatKeyShort, weekdayOfKey, parseDateKey, isValidKey,
 } = core;
 
 class DayViewMethods {
@@ -17,7 +18,7 @@ class DayViewMethods {
       const noon = parseDateKey(key);
       noon.setHours(12, 0, 0, 0);
       noon.setDate(noon.getDate() + this.settings.hijriAdjustment);
-      return new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura-nu-latn', {
+      return new Intl.DateTimeFormat(getLanguage() === 'ar' ? 'ar-u-ca-islamic-umalqura-nu-latn' : 'en-US-u-ca-islamic-umalqura-nu-latn', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -36,7 +37,7 @@ class DayViewMethods {
       title: o.title,
       notes: o.notes,
       priority: o.priority,
-      categoryName: category ? category.name : '',
+      categoryName: category ? localCategoryName(category) : '',
       categoryColor: category ? category.color : '',
       startLabel: formatTime12(o.start),
       endLabel: formatTime12(o.end),
@@ -62,11 +63,11 @@ class DayViewMethods {
   followsTitle(startDefinition) {
     if (!startDefinition || startDefinition.mode !== 'task') return null;
     const other = this.data.tasks.find((t) => t.id === startDefinition.taskId);
-    return other ? other.title : 'a deleted task';
+    return other ? other.title : t('a deleted task');
   }
 
   getDay(planningKey) {
-    if (!isValidKey(planningKey)) throw new Error('That date is not valid.');
+    if (!isValidKey(planningKey)) throw new Error(t('That date is not valid.'));
     const provider = this.provider();
     const nowDate = this.now();
     const nowMs = nowDate.getTime();
@@ -117,11 +118,11 @@ class DayViewMethods {
       const confSegs = zoneConflicts.map((c) => ({
         leftPct: ((c.from - z.start.getTime()) / span) * 100,
         widthPct: Math.max(((c.to - c.from) / span) * 100, 0.8),
-        title: `Conflict: “${c.a}” and “${c.b}” overlap`,
+        title: t('Conflict: “{a}” and “{b}” overlap', { a: c.a, b: c.b }),
       }));
       return {
         index: z.index,
-        name: z.name,
+        name: t(z.name),
         minutes: z.totalMinutes,
         freeMinutes: z.freeMinutes,
         minutesLeftLabel: isCurrent ? formatDuration(Math.max(0, Math.ceil((z.end.getTime() - nowMs) / 60000))) : '',
@@ -168,11 +169,11 @@ class DayViewMethods {
       nextKey: endKey,
       isCurrentDay: planningKey === currentKey,
       currentPlanningDayKey: currentKey,
-      dateTitle: parseDateKey(planningKey).toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      dateTitle: t('{weekday}, {month} {day}, {year}', {
+        weekday: weekdayLong(weekdayOfKey(planningKey)), month: monthLong(Number(planningKey.slice(5, 7)) - 1), day: Number(planningKey.slice(8, 10)), year: planningKey.slice(0, 4),
       }),
       hijri: this.hijriLabel(planningKey),
-      planningLine: `Planning Day: ${formatKeyShort(planningKey)} → ${formatKeyShort(endKey)}`,
+      planningLine: t('Planning Day: {from} → {to}', { from: formatKeyShort(planningKey), to: formatKeyShort(endKey) }),
       week: this.weekStrip(planningKey, currentKey),
       zones,
     };
@@ -183,8 +184,7 @@ class DayViewMethods {
     const provider = this.provider();
     const options = this.recurrenceOptions();
     const first = addDaysToKey(planningKey, -((weekdayOfKey(planningKey) - this.weekStart() + 7) % 7));
-    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const longNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const chipName = (wd) => (getLanguage() === 'en' ? weekdayShort(wd) : weekdayLong(wd));
     const days = [];
     for (let i = 0; i < 7; i++) {
       const key = addDaysToKey(first, i);
@@ -194,14 +194,14 @@ class DayViewMethods {
       const pct = list.length ? Math.round((done / list.length) * 100) : 0;
       days.push({
         key,
-        weekday: names[wd],
+        weekday: chipName(wd),
         day: parseDateKey(key).getDate(),
         total: list.length,
         done,
         pct,
         isToday: key === currentKey,
         isSelected: key === planningKey,
-        label: `${key === currentKey ? 'Today, ' : ''}${longNames[wd]} ${formatKeyShort(key)}, ${list.length ? `${done} of ${list.length} done` : 'no tasks'}`,
+        label: `${key === currentKey ? t('Today, ') : ''}${weekdayLong(wd)} ${formatKeyShort(key)}${t(', ')}${list.length ? t('{done} of {total} done', { done, total: list.length }) : t('no tasks')}`,
       });
     }
     return { days, prevKey: addDaysToKey(planningKey, -7), nextKey: addDaysToKey(planningKey, 7) };
@@ -231,14 +231,14 @@ class DayViewMethods {
     const tomorrowKey = addDaysToKey(todayKey, 1);
     return list.map((r) => {
       const k = dateKey(r.notifyAt);
-      const day = k === todayKey ? 'Today' : k === tomorrowKey ? 'Tomorrow' : formatKeyShort(k);
+      const day = k === todayKey ? t('Today') : k === tomorrowKey ? t('Tomorrow') : formatKeyShort(k);
       return {
         taskId: r.taskId,
         dateKey: r.dateKey,
         title: r.title,
-        whenLabel: `${day}, ${formatTime12(r.notifyAt)}`,
+        whenLabel: `${day}${t(', ')}${formatTime12(r.notifyAt)}`,
         startLabel: formatTime12(r.start),
-        zoneName: r.zoneName,
+        zoneName: t(r.zoneName),
       };
     });
   }

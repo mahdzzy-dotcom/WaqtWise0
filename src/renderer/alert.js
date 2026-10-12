@@ -50,6 +50,7 @@
   window.alertApi.onRender((next) => {
     const first = !state;
     state = next;
+    if (WW.applyLanguage && next.language !== WW.getLanguageCode) { WW.applyLanguage(next.language || 'en'); WW.getLanguageCode = next.language; }
     const item = current();
     // Ring once for each arrival of tasks (and only on one screen, even when several are covered).
     if (next.soundSeq !== lastSoundSeq) {

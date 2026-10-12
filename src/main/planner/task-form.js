@@ -3,12 +3,12 @@
 // Creating, editing, deleting and completing tasks.
 // These methods are added to PlannerService (see ../service.js); `this` is the service.
 
+const { t, weekdayShort } = require('../../core/i18n');
 const core = require('../../core');
 
 const {
   createTask, validateStart, validateRule, normalizeRule, describeRule, previewDates, buildOccurrence, resolveStart, computeEnd, placementNote, setCompletion, editTask, deleteOccurrences, dependencyProblem, findDependents, followsTransitively, freezeDependents, dateKey, formatTime12, formatDuration, formatKeyShort, weekdayOfKey, isValidKey,
 } = core;
-const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const EDIT_FIELDS = ['title', 'start', 'durationMinutes', 'notes', 'priority', 'categoryId', 'reminders'];
 const { copy, same } = require('./util');
 
@@ -61,11 +61,11 @@ class TaskFormMethods {
 
     errors.push(...validateStart(form.start));
     const durationOk = Number.isInteger(form.durationMinutes) && form.durationMinutes > 0;
-    if (!durationOk) errors.push('Duration must be a whole number of minutes, more than 0');
+    if (!durationOk) errors.push(t('Duration must be a whole number of minutes, more than 0'));
 
     let contextKey = form.recurrence ? form.recurrence.startDate : form.date;
     if (!isValidKey(contextKey)) {
-      errors.push(form.recurrence ? 'Please choose a start date' : 'Please choose a date');
+      errors.push(form.recurrence ? t('Please choose a start date') : t('Please choose a date'));
       contextKey = null;
     }
 
@@ -78,7 +78,7 @@ class TaskFormMethods {
           summary: describeRule(rule),
           preview: previewDates(rule, 5, this.recurrenceOptions()).map((k) => ({
             key: k,
-            label: `${WEEKDAY_SHORT[weekdayOfKey(k)]}, ${formatKeyShort(k, true)}`,
+            label: `${weekdayShort(weekdayOfKey(k))}${t(', ')}${formatKeyShort(k, true)}`,
           })),
         };
       }
@@ -111,7 +111,7 @@ class TaskFormMethods {
       out.placement = {
         text: note.text,
         zoneIndex: note.zoneIndex,
-        zoneName: note.zoneName,
+        zoneName: t(note.zoneName),
         differsFromDate: note.differsFromDate,
       };
     }
@@ -160,7 +160,7 @@ class TaskFormMethods {
 
     if (wasRecurring !== willRecur) {
       if (scope !== 'all') {
-        throw new Error('To switch between repeating and not repeating, choose "All occurrences".');
+        throw new Error(t('To switch between repeating and not repeating, choose "All occurrences".'));
       }
       const replacement = createTask({ id: old.id, ...fields, recurrence, date });
       updated = { ...replacement, completions: copy(old.completions), completedAt: copy(old.completedAt || {}) };
@@ -185,7 +185,7 @@ class TaskFormMethods {
       const ruleChanged = !same(normalizeRule(old.recurrence), recurrence);
       if (ruleChanged) {
         if (scope === 'this') {
-          throw new Error('The repeat pattern can only be changed for "This and following" or "All occurrences".');
+          throw new Error(t('The repeat pattern can only be changed for "This and following" or "All occurrences".'));
         }
         patch.recurrence = recurrence;
       }
@@ -243,18 +243,18 @@ class TaskFormMethods {
         return formatTime12(new Date(2000, 0, 1, h, m));
       }
       if (def.mode === 'prayer') {
-        const name = def.prayer.charAt(0).toUpperCase() + def.prayer.slice(1);
-        return `${def.minutes} min ${def.direction} ${name}`;
+        const name = t(def.prayer.charAt(0).toUpperCase() + def.prayer.slice(1));
+        return t(def.direction === 'before' ? '{n} min before {prayer}' : '{n} min after {prayer}', { n: def.minutes, prayer: name });
       }
-      return 'follows another task';
+      return t('follows another task');
     };
     return this.data.tasks
-      .filter((t) => t.id !== taskId && !(taskId && followsTransitively(this.data.tasks, t.id, taskId)))
+      .filter((task) => task.id !== taskId && !(taskId && followsTransitively(this.data.tasks, task.id, taskId)))
       .sort((a, b) => a.title.localeCompare(b.title))
-      .map((t) => ({
-        taskId: t.id,
-        title: t.title,
-        label: `${t.title} (${describe(t.start)}, ${formatDuration(t.durationMinutes)}${t.recurrence ? ', repeats' : ''})`,
+      .map((task) => ({
+        taskId: task.id,
+        title: task.title,
+        label: `${task.title} (${describe(task.start)}${t(', ')}${formatDuration(task.durationMinutes)}${task.recurrence ? t(', repeats') : ''})`,
       }));
   }
 
@@ -272,7 +272,7 @@ class TaskFormMethods {
     const old = this.findTask(taskId);
     const task = createTask({
       id: this.newId(),
-      title: `${old.title} (copy)`,
+      title: t('{title} (copy)', { title: old.title }),
       start: copy(old.start),
       durationMinutes: old.durationMinutes,
       date: old.date,

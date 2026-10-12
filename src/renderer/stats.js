@@ -5,28 +5,30 @@
 
 (function () {
   const WW = (window.WW = window.WW || {});
-  const { h, clear } = WW;
+  const { h, clear, T, TP } = WW;
+  const i18n = window.WWI18n;
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const RANGES = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['custom', 'Custom']];
-  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const RANGES = () => [['day', T('Day')], ['week', T('Week')], ['month', T('Month')], ['year', T('Year')], ['custom', T('Custom')]];
+  const WEEKDAYS = () => [0, 1, 2, 3, 4, 5, 6].map((i) => i18n.weekdayShort(i));
+  const MONTHS_SHORT = () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => i18n.monthShort(i));
   const BAR_AREA = 170; // tallest bar, in pixels
   const LATE_SHOWN = 5;
 
   // Must match STATS_CHARTS in src/core/settings.js (a test checks that).
-  const CHARTS = [
-    ['kpi-rate', 'Completion rate', 'Share of counted tasks that are done'],
-    ['kpi-done', 'Tasks done', 'How many tasks were done, out of how many'],
-    ['kpi-streak', 'Current streak', 'Days in a row with at least 70% done'],
-    ['kpi-time', 'Planned time', 'Total time of the counted tasks'],
-    ['bars', 'Done vs planned', 'Bars of done and planned tasks'],
-    ['zones', 'By zone', 'Share done in each of the 5 zones'],
-    ['heat', 'Calendar heat map', 'Every day of the month or year as a colour'],
-    ['trend', 'Completion trend', 'How the completion rate moves over time'],
-    ['categories', 'By category', 'Share done and planned time per category'],
-    ['late', 'Needs attention', 'Tasks not done and already past their time'],
+  const CHARTS_DEF = () => [
+    ['kpi-rate', T('Completion rate'), T('Share of counted tasks that are done')],
+    ['kpi-done', T('Tasks done'), T('How many tasks were done, out of how many')],
+    ['kpi-streak', T('Current streak'), T('Days in a row with at least 70% done')],
+    ['kpi-time', T('Planned time'), T('Total time of the counted tasks')],
+    ['bars', T('Done vs planned'), T('Bars of done and planned tasks')],
+    ['zones', T('By zone'), T('Share done in each of the 5 zones')],
+    ['heat', T('Calendar heat map'), T('Every day of the month or year as a colour')],
+    ['trend', T('Completion trend'), T('How the completion rate moves over time')],
+    ['categories', T('By category'), T('Share done and planned time per category')],
+    ['late', T('Needs attention'), T('Tasks not done and already past their time')],
   ];
+  const CHARTS = { map: (f) => CHARTS_DEF().map(f), find: (f) => CHARTS_DEF().find(f) };
   const local = { query: { range: 'week' }, showAllLate: false };
 
   const shade = (pct) => `color-mix(in srgb, var(--accent) ${Math.round(14 + pct * 0.86)}%, var(--surface))`;
@@ -42,38 +44,38 @@
 
   function header(data) {
     const go = (query) => query && WW.showStats(query);
-    const prev = h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': 'Previous period', disabled: !data.prevQuery, onclick: () => go(data.prevQuery) }, WW.icon('left', 18, 2.2));
-    const next = h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': 'Next period', disabled: !data.nextQuery, onclick: () => go(data.nextQuery) }, WW.icon('right', 18, 2.2));
+    const prev = h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': T('Previous period'), disabled: !data.prevQuery, onclick: () => go(data.prevQuery) }, WW.icon(WW.arrowIcon('prev'), 18, 2.2));
+    const next = h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': T('Next period'), disabled: !data.nextQuery, onclick: () => go(data.nextQuery) }, WW.icon(WW.arrowIcon('next'), 18, 2.2));
 
     const choose = (id) => {
       if (id === data.range) return;
       if (id === 'custom') go({ range: 'custom', fromKey: data.rangeStartKey, toKey: data.rangeEndKey });
       else go({ range: id, anchorKey: data.rangeEndKey });
     };
-    const seg = h('div', { class: 'stats-seg', role: 'group', 'aria-label': 'Range' },
-      RANGES.map(([id, label]) => h('button', {
+    const seg = h('div', { class: 'stats-seg', role: 'group', 'aria-label': T('Range') },
+      RANGES().map(([id, label]) => h('button', {
         type: 'button', class: id === data.range ? 'on' : '', 'aria-pressed': String(id === data.range), 'data-range': id, onclick: () => choose(id),
       }, label)));
 
     const custom = data.range === 'custom'
       ? [
-        h('input', { type: 'date', value: data.rangeStartKey, max: data.todayKey, 'aria-label': 'From date', id: 'stats-from',
+        h('input', { type: 'date', value: data.rangeStartKey, max: data.todayKey, 'aria-label': T('From date'), id: 'stats-from',
           onchange: (e) => e.target.value && go({ range: 'custom', fromKey: e.target.value, toKey: data.rangeEndKey }) }),
-        h('span', { class: 'stats-to', text: 'to' }),
-        h('input', { type: 'date', value: data.rangeEndKey, max: data.todayKey, 'aria-label': 'To date', id: 'stats-to',
+        h('span', { class: 'stats-to', text: T('to') }),
+        h('input', { type: 'date', value: data.rangeEndKey, max: data.todayKey, 'aria-label': T('To date'), id: 'stats-to',
           onchange: (e) => e.target.value && go({ range: 'custom', fromKey: data.rangeStartKey, toKey: e.target.value }) }),
-        h('button', { class: 'btn tall', type: 'button', id: 'stats-all', text: 'All time', onclick: () => go({ range: 'custom', fromKey: data.earliestKey, toKey: data.todayKey }) }),
+        h('button', { class: 'btn tall', type: 'button', id: 'stats-all', text: T('All time'), onclick: () => go({ range: 'custom', fromKey: data.earliestKey, toKey: data.todayKey }) }),
       ]
       : [];
 
     return h('div', { class: 'day-head stats-head' },
       h('div', { class: 'day-info' },
-        h('h1', { class: 'day-title', text: 'Statistics' }),
+        h('h1', { class: 'day-title', text: T('Statistics') }),
         h('div', { class: 'stats-nav' },
           h('div', { class: 'stats-arrows' }, prev, next),
           h('div', { class: 'day-sub', id: 'stats-range-label', text: data.rangeLabel }))),
       h('div', { class: 'day-actions stats-actions' }, custom, seg,
-        h('button', { class: 'btn tall', type: 'button', id: 'stats-manage', onclick: openManage }, WW.icon('gear', 18, 2), 'Manage')));
+        h('button', { class: 'btn tall', type: 'button', id: 'stats-manage', onclick: openManage }, WW.icon('gear', 18, 2), T('Manage'))));
   }
 
   // ---- key figures ----------------------------------------------------------------------------------
@@ -95,29 +97,29 @@
     const detailed = b.items.length <= 12;
     const stride = b.items.length > 12 ? Math.ceil(b.items.length / 10) : 1;
     const columns = h('div', { class: `bars ${many ? 'tight' : ''}` }, b.items.map((it) =>
-      h('div', { class: 'bar-col', title: `${it.title}: ${it.done} of ${it.total} done` },
+      h('div', { class: 'bar-col', title: T('{title}: {done} of {total} done', { title: it.title, done: it.done, total: it.total }) },
         h('div', { class: 'bar-pct', text: detailed && it.total ? `${it.pct}%` : '' }),
         h('div', { class: 'bar-planned', style: { height: `${Math.round((it.total / b.maxTotal) * BAR_AREA)}px` } },
           h('div', { class: 'bar-done', style: { height: `${Math.round((it.done / b.maxTotal) * BAR_AREA)}px` } })))));
     const labels = h('div', { class: `bar-labels ${many ? 'tight' : ''}` }, b.items.map((it, i) =>
       h('div', {}, h('div', { class: 'bl-name', text: i % stride === 0 ? it.label : '' }),
         h('div', { class: 'bl-ratio', text: detailed && !it.future ? `${it.done}/${it.total}` : '' }))));
-    return h('section', { class: 'stats-card bars-card', 'aria-label': 'Done versus planned' },
+    return h('section', { class: 'stats-card bars-card', 'aria-label': T('Done versus planned') },
       h('div', { class: 'stats-card-head' },
         h('div', {}, h('h2', { text: b.title }), h('div', { class: 'sub', id: 'bars-sub', text: b.sub })),
         h('div', { class: 'stats-legend' },
-          h('span', {}, h('i', { class: 'sw planned' }), 'Planned'), h('span', {}, h('i', { class: 'sw done' }), 'Done'))),
+          h('span', {}, h('i', { class: 'sw planned' }), T('Planned')), h('span', {}, h('i', { class: 'sw done' }), T('Done')))),
       columns, labels);
   }
 
   function zonesCard(data) {
-    return h('section', { class: 'stats-card zones-card', 'aria-label': 'By zone' },
-      h('h2', { text: 'By zone' }), h('div', { class: 'sub', text: 'Share of tasks done in each zone' }),
+    return h('section', { class: 'stats-card zones-card', 'aria-label': T('By zone') },
+      h('h2', { text: T('By zone') }), h('div', { class: 'sub', text: T('Share of tasks done in each zone') }),
       h('div', { class: 'bars-list' }, data.zones.map((z) =>
         h('div', { class: `z${z.index}` },
           h('div', { class: 'row-top' }, h('span', { class: 'zone-label' }, WW.zoneIcon(z.index, 18), z.name), h('span', { text: `${z.pct}%` })),
           h('div', { class: 'meter' }, h('div', { style: { width: `${z.pct}%`, background: 'var(--zf)' } })),
-          h('div', { class: 'row-note', text: `${z.done} of ${z.total} tasks` })))));
+          h('div', { class: 'row-note', text: T('{done} of {total} tasks', { done: z.done, total: z.total }) })))));
   }
 
   // ---- heat map -------------------------------------------------------------------------------------------
@@ -125,13 +127,13 @@
   function heatCard(data) {
     const heat = data.heat;
     const open = (key) => WW.showStats({ range: 'day', anchorKey: key });
-    const legend = h('div', { class: 'stats-legend heat-legend' }, 'Less',
-      [0, 25, 50, 75, 100].map((p) => h('span', { class: 'heat-sw', style: { background: shade(p) } })), 'More');
-    const cellTitle = (d) => `${d.key}${d.pct === null ? '' : `: ${d.pct}% done`}`;
+    const legend = h('div', { class: 'stats-legend heat-legend' }, T('Less'),
+      [0, 25, 50, 75, 100].map((p) => h('span', { class: 'heat-sw', style: { background: shade(p) } })), T('More'));
+    const cellTitle = (d) => (d.pct === null ? d.key : T('{date}: {pct}% done', { date: d.key, pct: d.pct }));
     let body;
     if (heat.mode === 'month') {
       const cells = [];
-      for (let i = 0; i < 7; i++) cells.push(h('div', { class: 'heat-wd', text: WEEKDAYS[(heat.weekStart + i) % 7] }));
+      for (let i = 0; i < 7; i++) cells.push(h('div', { class: 'heat-wd', text: WEEKDAYS()[(heat.weekStart + i) % 7] }));
       for (let i = 0; i < heat.firstWeekday; i++) cells.push(h('div', { class: 'heat-blank' }));
       heat.days.forEach((d) => {
         const strong = d.pct !== null && d.pct >= 70;
@@ -145,7 +147,7 @@
     } else {
       const marks = [];
       heat.days.forEach((d, i) => {
-        if (d.day === 1) marks.push(h('div', { class: 'ym', style: { gridColumn: String(Math.floor((heat.firstWeekday + i) / 7) + 1) }, text: MONTHS_SHORT[Number(d.key.slice(5, 7)) - 1] }));
+        if (d.day === 1) marks.push(h('div', { class: 'ym', style: { gridColumn: String(Math.floor((heat.firstWeekday + i) / 7) + 1) }, text: MONTHS_SHORT()[Number(d.key.slice(5, 7)) - 1] }));
       });
       const cells = [];
       for (let i = 0; i < heat.firstWeekday; i++) cells.push(h('div', { class: 'heat-blank' }));
@@ -155,9 +157,9 @@
       })));
       body = h('div', { class: 'heat-year-wrap' }, h('div', { class: 'heat-year' }, h('div', { class: 'heat-marks' }, marks), h('div', { class: 'heat-grid' }, cells)));
     }
-    return h('section', { class: 'stats-card heat-card', 'aria-label': 'Calendar heat map' },
+    return h('section', { class: 'stats-card heat-card', 'aria-label': T('Calendar heat map') },
       h('div', { class: 'stats-card-head' },
-        h('div', {}, h('h2', { id: 'heat-title', text: heat.title }), h('div', { class: 'sub', text: 'Darker = more of that day’s tasks were done. Click a day to open it.' })),
+        h('div', {}, h('h2', { id: 'heat-title', text: heat.title }), h('div', { class: 'sub', text: T('Darker = more of that day’s tasks were done. Click a day to open it.') })),
         legend),
       body);
   }
@@ -175,10 +177,11 @@
     const lo = Math.max(0, Math.floor((Math.min(...values) - 8) / 10) * 10);
     const hi = Math.min(100, Math.max(lo + 30, Math.ceil((Math.max(...values) + 4) / 10) * 10));
     const n = series.length;
-    const X = (i) => (n === 1 ? (x0 + x1) / 2 : Math.round(x0 + ((x1 - x0) * i) / (n - 1)));
+    const flip = (i) => (WW.isRtl() ? n - 1 - i : i);
+    const X = (i) => (n === 1 ? (x0 + x1) / 2 : Math.round(x0 + ((x1 - x0) * flip(i)) / (n - 1)));
     const Y = (v) => Math.round(yBot - ((v - lo) / (hi - lo)) * (yBot - yTop));
     const poly = (arr) => arr.map((v, i) => (v === null ? null : `${X(i)},${Y(v)}`)).filter(Boolean).join(' ');
-    const root = svg('svg', { viewBox: `0 0 ${W} 220`, width: '100%', role: 'img', 'aria-label': `Completion trend. ${trend.sub}` });
+    const root = svg('svg', { viewBox: `0 0 ${W} 220`, width: '100%', role: 'img', 'aria-label': T('Completion trend. {sub}', { sub: trend.sub }) });
     root.style.overflow = 'visible';
 
     const step = Math.round((hi - lo) / 3);
@@ -214,22 +217,22 @@
 
   function trendCard(data) {
     const t = data.trend;
-    return h('section', { class: 'stats-card trend-card', 'aria-label': 'Completion trend' },
+    return h('section', { class: 'stats-card trend-card', 'aria-label': T('Completion trend') },
       h('div', { class: 'stats-card-head' },
-        h('div', {}, h('h2', { text: 'Completion trend' }), h('div', { class: 'sub', id: 'trend-sub', text: t.sub })),
+        h('div', {}, h('h2', { text: T('Completion trend') }), h('div', { class: 'sub', id: 'trend-sub', text: t.sub })),
         h('div', { class: 'stats-legend' }, t.legend.map((l) => h('span', {}, h('i', { class: `ln ${l.style}` }), l.label)))),
       t.ok
         ? h('div', { class: 'trend-body' }, trendChart(t))
-        : h('div', { class: 'trend-empty', id: 'trend-empty', text: 'Not enough data yet. The trend appears after 3 days with tasks.' }));
+        : h('div', { class: 'trend-empty', id: 'trend-empty', text: T('Not enough data yet. The trend appears after 3 days with tasks.') }));
   }
 
   // ---- by category, needs attention ---------------------------------------------------------------------------------
 
   function categoriesCard(data) {
-    return h('section', { class: 'stats-card cat-card', 'aria-label': 'By category' },
-      h('h2', { text: 'By category' }), h('div', { class: 'sub', text: 'Share done, and planned time' }),
+    return h('section', { class: 'stats-card cat-card', 'aria-label': T('By category') },
+      h('h2', { text: T('By category') }), h('div', { class: 'sub', text: T('Share done, and planned time') }),
       data.categories.length === 0
-        ? h('div', { class: 'stats-none', text: 'No tasks in this range.' })
+        ? h('div', { class: 'stats-none', text: T('No tasks in this range.') })
         : h('div', { class: 'bars-list cats' }, data.categories.map((c) =>
           h('div', { class: 'cat-line' },
             h('span', { class: 'cat-dot', style: { background: c.color } }),
@@ -250,12 +253,12 @@
       h('span', { class: 'late-age', text: t.ageLabel }))));
     const more = late.total > LATE_SHOWN
       ? h('button', { class: 'link-btn late-more', type: 'button', id: 'late-more',
-        text: local.showAllLate ? 'Show fewer' : `View all ${late.total}`,
+        text: local.showAllLate ? T('Show fewer') : T('View all {n}', { n: late.total }),
         onclick: () => { local.showAllLate = !local.showAllLate; WW.renderStats(); } })
       : null;
-    return h('section', { class: 'stats-card late-card', 'aria-label': 'Needs attention' },
-      h('h2', { text: 'Needs attention' }), h('div', { class: 'sub', text: 'Not done and already past their time' }),
-      late.total === 0 ? h('div', { class: 'stats-none', id: 'late-none', text: 'Nothing overdue in this range.' }) : list, more);
+    return h('section', { class: 'stats-card late-card', 'aria-label': T('Needs attention') },
+      h('h2', { text: T('Needs attention') }), h('div', { class: 'sub', text: T('Not done and already past their time') }),
+      late.total === 0 ? h('div', { class: 'stats-none', id: 'late-none', text: T('Nothing overdue in this range.') }) : list, more);
   }
 
   // ---- screen ---------------------------------------------------------------------------------------------------------
@@ -269,17 +272,17 @@
     const cards = chosen.filter((id) => builders[id]);
     root.append(
       header(data),
-      ...(data.empty ? [h('div', { class: 'stats-intro', id: 'stats-empty', text: 'Nothing to count yet. Tasks appear here once they are done or their time has passed.' })] : []),
+      ...(data.empty ? [h('div', { class: 'stats-intro', id: 'stats-empty', text: T('Nothing to count yet. Tasks appear here once they are done or their time has passed.') })] : []),
       ...(kpiIds.length ? [kpiCards(data, kpiIds)] : []),
       ...(cards.length
         ? [h('div', { class: 'stats-grid' }, cards.map((id) => builders[id](data)))]
-        : (kpiIds.length ? [] : [h('div', { class: 'stats-intro', id: 'stats-nothing', text: 'No charts are shown. Use Manage to add some.' })])));
+        : (kpiIds.length ? [] : [h('div', { class: 'stats-intro', id: 'stats-nothing', text: T('No charts are shown. Use Manage to add some.') })])));
   };
 
   // ---- Manage: add, remove and re-order the charts -------------------------------------------------------
 
   function openManage() {
-    const dlg = WW.openDialog({ title: 'Manage charts' });
+    const dlg = WW.openDialog({ title: T('Manage charts') });
     const info = (id) => CHARTS.find((c) => c[0] === id);
     const save = async (list) => {
       try {
@@ -298,23 +301,23 @@
         h('div', { class: 'manage-name' }, h('b', { text: info(id)[1] }), h('div', { class: 'hint', text: info(id)[2] })),
         h('div', { class: 'manage-btns' }, buttons));
       clear(dlg.body).append(
-        h('h3', { class: 'manage-title', text: `Shown (${shown.length})` }),
-        ...(shown.length === 0 ? [h('p', { class: 'hint', text: 'No charts are shown.' })] : []),
+        h('h3', { class: 'manage-title', text: T('Shown ({n})', { n: shown.length }) }),
+        ...(shown.length === 0 ? [h('p', { class: 'hint', text: T('No charts are shown.') })] : []),
         ...shown.map((id, i) => row(id, [
-          h('button', { class: 'btn small', type: 'button', text: '▲', 'aria-label': `Move ${info(id)[1]} up`, disabled: i === 0, onclick: () => move(i, -1) }),
-          h('button', { class: 'btn small', type: 'button', text: '▼', 'aria-label': `Move ${info(id)[1]} down`, disabled: i === shown.length - 1, onclick: () => move(i, 1) }),
-          h('button', { class: 'btn small danger', type: 'button', text: 'Remove', 'aria-label': `Remove ${info(id)[1]}`, onclick: () => save(shown.filter((x) => x !== id)) }),
+          h('button', { class: 'btn small', type: 'button', text: '▲', 'aria-label': T('Move {name} up', { name: info(id)[1] }), disabled: i === 0, onclick: () => move(i, -1) }),
+          h('button', { class: 'btn small', type: 'button', text: '▼', 'aria-label': T('Move {name} down', { name: info(id)[1] }), disabled: i === shown.length - 1, onclick: () => move(i, 1) }),
+          h('button', { class: 'btn small danger', type: 'button', text: T('Remove'), 'aria-label': T('Remove {name}', { name: info(id)[1] }), onclick: () => save(shown.filter((x) => x !== id)) }),
         ])),
-        h('h3', { class: 'manage-title', text: `Available to add (${hidden.length})` }),
-        ...(hidden.length === 0 ? [h('p', { class: 'hint', text: 'Every chart is already shown.' })] : []),
+        h('h3', { class: 'manage-title', text: T('Available to add ({n})', { n: hidden.length }) }),
+        ...(hidden.length === 0 ? [h('p', { class: 'hint', text: T('Every chart is already shown.') })] : []),
         ...hidden.map((id) => row(id, [
-          h('button', { class: 'btn small primary', type: 'button', text: 'Add', 'aria-label': `Add ${info(id)[1]}`, onclick: () => save(shown.concat(id)) }),
+          h('button', { class: 'btn small primary', type: 'button', text: T('Add'), 'aria-label': T('Add {name}', { name: info(id)[1] }), onclick: () => save(shown.concat(id)) }),
         ])));
     }
     draw();
     dlg.footer.append(
-      h('button', { class: 'btn', type: 'button', id: 'manage-reset', text: 'Show all, default order', onclick: () => save(CHARTS.map((c) => c[0])) }),
-      h('button', { class: 'btn primary', type: 'button', text: 'Done', onclick: () => dlg.close() }));
+      h('button', { class: 'btn', type: 'button', id: 'manage-reset', text: T('Show all, default order'), onclick: () => save(CHARTS.map((c) => c[0])) }),
+      h('button', { class: 'btn primary', type: 'button', text: T('Done'), onclick: () => dlg.close() }));
   }
 
   // query: { range, anchorKey, fromKey, toKey }. Without a query the last one is used again (a refresh).

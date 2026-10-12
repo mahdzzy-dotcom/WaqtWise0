@@ -24,6 +24,7 @@ class DataTransferMethods {
     if (this.store.backupNow) this.store.backupNow('before-import'); // so a wrong import can be undone
     this.data = { ...data, reminderState: this.data.reminderState, statsHistory: this.history() };
     this.providerCache = null;
+    this.applyLanguage();
     this.persist();
     this.onSettingsChanged(copy(this.data.settings));
     this.onDataChanged();
@@ -44,6 +45,7 @@ class DataTransferMethods {
     this.store.backupNow('before-restore');
     this.data = { ...data, reminderState: this.data.reminderState, statsHistory: this.history() };
     this.providerCache = null;
+    this.applyLanguage();
     this.persist();
     this.onSettingsChanged(copy(this.data.settings));
     this.onDataChanged();

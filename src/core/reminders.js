@@ -10,6 +10,7 @@
 
 const { addMinutes, addDaysToKey, dateKey, formatTime12, formatTime12InZone, formatDuration } = require('./time');
 const { resolveCity } = require('./cities');
+const { t, tp } = require('./i18n');
 const { PRAYERS, ZONE_NAMES, deriveZone } = require('./zones');
 const { getOccurrences } = require('./tasks');
 
@@ -173,7 +174,7 @@ function zoneStartEvents(provider, fromMs, toMs) {
 // ---- Notification text -------------------------------------------------------------------------------
 
 function humanMinutes(minutes) {
-  return minutes < 60 ? `${minutes} min` : formatDuration(minutes);
+  return minutes < 60 ? t('{n} min', { n: minutes }) : formatDuration(minutes);
 }
 
 // Content: task title, start time and Zone name (spec 10.3).
@@ -183,10 +184,10 @@ function formatTaskNotification(item, minutesUntilStart, settings) {
   const s = withDefaults(settings);
   const startText = formatTime12(item.start);
   let first;
-  if (minutesUntilStart > 0) first = `Starts in ${humanMinutes(minutesUntilStart)} · ${startText}`;
-  else if (minutesUntilStart === 0) first = `Starts now · ${startText}`;
-  else first = `Started at ${startText}`;
-  const second = `Zone: ${item.zoneName}`;
+  if (minutesUntilStart > 0) first = t('Starts in {time} · {at}', { time: humanMinutes(minutesUntilStart), at: startText });
+  else if (minutesUntilStart === 0) first = t('Starts now · {at}', { at: startText });
+  else first = t('Started at {at}', { at: startText });
+  const second = t('Zone: {zone}', { zone: t(item.zoneName) });
 
   return {
     kind: item.kind === 'snooze' ? 'snooze' : 'task',
@@ -204,11 +205,11 @@ function formatTaskNotification(item, minutesUntilStart, settings) {
 function formatZoneNotification(event, settings) {
   const s = withDefaults(settings);
   const { timeZone } = resolveCity(settings); // a custom city shows its own time zone
-  const line = `Until ${timeZone ? formatTime12InZone(event.zoneEnd, timeZone) : formatTime12(event.zoneEnd)}`;
+  const line = t('Until {time}', { time: timeZone ? formatTime12InZone(event.zoneEnd, timeZone) : formatTime12(event.zoneEnd) });
   return {
     kind: 'zone',
     id: event.id,
-    title: `${event.zoneName} has started`,
+    title: t('{zone} has started', { zone: t(event.zoneName) }),
     lines: [line],
     body: line,
     silent: !s.soundEnabled,
@@ -246,11 +247,11 @@ function formatMissedNotification(items, settings) {
   const s = withDefaults(settings);
   const n = items.length;
   const shown = items.slice(0, 3).map((i) => `${formatTime12(i.start)} · ${i.title}`);
-  if (n > shown.length) shown.push(`and ${n - shown.length} more`);
+  if (n > shown.length) shown.push(t('and {n} more', { n: n - shown.length }));
   return {
     kind: 'missed',
     id: `missed:${items[0] ? items[0].notifyAt.getTime() : 0}`,
-    title: n === 1 ? 'You missed 1 reminder' : `You missed ${n} reminders`,
+    title: tp(n, 'You missed 1 reminder', 'You missed {n} reminders'),
     lines: shown,
     body: shown.join('\n'),
     silent: !s.soundEnabled,

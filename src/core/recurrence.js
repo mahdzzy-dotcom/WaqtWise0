@@ -1,4 +1,5 @@
 'use strict';
+const { t, tp } = require('./i18n');
 
 // Rule-based recurrence engine.
 //
@@ -90,42 +91,42 @@ function isWeekday(n) {
 
 function checkPositions(positions, label, errors) {
   if (!Array.isArray(positions) || positions.length === 0) {
-    errors.push(`${label}: choose at least one position (1st, 2nd, 3rd, 4th or last)`);
+    errors.push(t('{label}: choose at least one position (1st, 2nd, 3rd, 4th or last)', { label: t(label) }));
   } else if (!positions.every((p) => VALID_POSITIONS.includes(p))) {
-    errors.push(`${label}: positions must be 1, 2, 3, 4 or -1 (last)`);
+    errors.push(t('{label}: positions must be 1, 2, 3, 4 or -1 (last)', { label: t(label) }));
   }
 }
 
 // Returns a list of friendly error messages (empty list = valid).
 function validateRule(rule) {
   const errors = [];
-  if (!rule || typeof rule !== 'object') return ['Recurrence is missing'];
+  if (!rule || typeof rule !== 'object') return [t('Recurrence is missing')];
   const r = normalizeRule(rule);
 
-  if (!isValidKey(r.startDate)) errors.push('Start date is not a valid date');
-  if (!FREQUENCIES.includes(r.frequency)) errors.push('Repeat must be daily, weekly, monthly or yearly');
-  if (!Number.isInteger(r.interval) || r.interval < 1) errors.push('"Every N" must be a whole number, 1 or more');
+  if (!isValidKey(r.startDate)) errors.push(t('Start date is not a valid date'));
+  if (!FREQUENCIES.includes(r.frequency)) errors.push(t('Repeat must be daily, weekly, monthly or yearly'));
+  if (!Number.isInteger(r.interval) || r.interval < 1) errors.push(t('"Every N" must be a whole number, 1 or more'));
 
   if (r.frequency === 'weekly') {
     if (!Array.isArray(r.weekdays) || r.weekdays.length === 0 || !r.weekdays.every(isWeekday)) {
-      errors.push('Weekly: choose at least one weekday');
+      errors.push(t('Weekly: choose at least one weekday'));
     }
   }
 
   if (r.frequency === 'monthly') {
     const m = r.monthly;
     if (!m || !MONTHLY_TYPES.includes(m.type)) {
-      errors.push('Monthly: choose how the task repeats within the month');
+      errors.push(t('Monthly: choose how the task repeats within the month'));
     } else if (m.type === 'dayOfMonth') {
       if (!Array.isArray(m.days) || m.days.length === 0 || !m.days.every((d) => Number.isInteger(d) && d >= 1 && d <= 31)) {
-        errors.push('Monthly: day numbers must be between 1 and 31');
+        errors.push(t('Monthly: day numbers must be between 1 and 31'));
       }
     } else if (m.type === 'nthWeekday') {
-      if (!isWeekday(m.weekday)) errors.push('Monthly: choose a weekday');
+      if (!isWeekday(m.weekday)) errors.push(t('Monthly: choose a weekday'));
       checkPositions(m.positions, 'Monthly', errors);
     } else if (m.type === 'weekdaysInMonth') {
       if (!Array.isArray(m.weekdays) || m.weekdays.length === 0 || !m.weekdays.every(isWeekday)) {
-        errors.push('Monthly: choose at least one weekday');
+        errors.push(t('Monthly: choose at least one weekday'));
       }
     }
   }
@@ -133,28 +134,28 @@ function validateRule(rule) {
   if (r.frequency === 'yearly') {
     const y = r.yearly;
     if (!y || !Number.isInteger(y.month) || y.month < 1 || y.month > 12) {
-      errors.push('Yearly: choose a month');
+      errors.push(t('Yearly: choose a month'));
     } else if (!YEARLY_TYPES.includes(y.type)) {
-      errors.push('Yearly: choose a day of the month or a weekday position');
+      errors.push(t('Yearly: choose a day of the month or a weekday position'));
     } else if (y.type === 'dayOfMonth') {
       const maxDay = daysInMonth(2024, y.month); // leap year, so Feb 29 is allowed
       if (!Number.isInteger(y.day) || y.day < 1 || y.day > maxDay) {
-        errors.push('Yearly: that day does not exist in the chosen month');
+        errors.push(t('Yearly: that day does not exist in the chosen month'));
       }
     } else if (y.type === 'nthWeekday') {
-      if (!isWeekday(y.weekday)) errors.push('Yearly: choose a weekday');
+      if (!isWeekday(y.weekday)) errors.push(t('Yearly: choose a weekday'));
       checkPositions(y.positions, 'Yearly', errors);
     }
   }
 
   const end = r.end;
   if (!end || !['never', 'date', 'count'].includes(end.type)) {
-    errors.push('End must be "never", an end date, or a number of occurrences');
+    errors.push(t('End must be "never", an end date, or a number of occurrences'));
   } else if (end.type === 'date') {
-    if (!isValidKey(end.date)) errors.push('End date is not a valid date');
-    else if (isValidKey(r.startDate) && end.date < r.startDate) errors.push('End date is before the start date');
+    if (!isValidKey(end.date)) errors.push(t('End date is not a valid date'));
+    else if (isValidKey(r.startDate) && end.date < r.startDate) errors.push(t('End date is before the start date'));
   } else if (end.type === 'count') {
-    if (!Number.isInteger(end.count) || end.count < 1) errors.push('Number of occurrences must be 1 or more');
+    if (!Number.isInteger(end.count) || end.count < 1) errors.push(t('Number of occurrences must be 1 or more'));
   }
 
   return errors;
@@ -329,22 +330,21 @@ function previewDates(rule, count = 5, options = {}) {
 
 // ---- Plain-language summary ------------------------------------------------------------------
 
-const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTH_LONG = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+const { weekdayShort, weekdayLong, monthLong, getLanguage } = require('./i18n');
 
-function ordinal(n) {
-  if (n === -1) return 'last';
-  const names = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-  return names[n] || `${n}th`;
+// 1st, 2nd, ... last. In Arabic the word depends on the gender of the weekday (Friday is feminine).
+function ordinal(n, weekday) {
+  const name = n === -1 ? 'last' : { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || `${n}th`;
+  return weekday === 5 && getLanguage() !== 'en' ? t(`${name} (f)`) : t(name);
 }
 
 function naturalList(items) {
   if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+  return t('{list} and {last}', { list: items.slice(0, -1).join(t(', ')), last: items[items.length - 1] });
+}
+
+function namesOf(weekdays) {
+  return weekdays.length === 1 ? weekdayLong(weekdays[0]) : weekdays.map((d) => weekdayShort(d)).join(t(', '));
 }
 
 function describeRule(rule) {
@@ -353,50 +353,55 @@ function describeRule(rule) {
   let text;
 
   if (r.frequency === 'daily') {
-    text = n === 1 ? 'Every day' : `Every ${n} days`;
+    text = tp(n, 'Every day', 'Every {n} days');
   } else if (r.frequency === 'weekly') {
     if (n === 1 && r.weekdays.length === 1) {
-      text = `Every ${WEEKDAY_LONG[r.weekdays[0]]}`;
+      text = t('Every {day}', { day: weekdayLong(r.weekdays[0]) });
     } else {
-      const names = r.weekdays.length === 1
-        ? WEEKDAY_LONG[r.weekdays[0]]
-        : r.weekdays.map((d) => WEEKDAY_SHORT[d]).join(', ');
-      text = `${n === 1 ? 'Every week' : `Every ${n} weeks`} on ${names}`;
+      text = tp(n, 'Every week on {names}', 'Every {n} weeks on {names}', { names: namesOf(r.weekdays) });
     }
   } else if (r.frequency === 'monthly') {
     const m = r.monthly;
     if (m.type === 'weekdaysInMonth') {
-      const names = m.weekdays.length === 1
-        ? WEEKDAY_LONG[m.weekdays[0]]
-        : m.weekdays.map((d) => WEEKDAY_SHORT[d]).join(', ');
-      text = `Every ${names} of ${n === 1 ? 'every month' : `every ${ordinal(n)} month`}`;
+      const names = namesOf(m.weekdays);
+      text = n === 1 ? t('Every {names} of every month', { names }) : t('Every {names} of every {ordinal} month', { names, ordinal: ordinalNumber(n), n });
     } else if (m.type === 'dayOfMonth') {
-      text = `${n === 1 ? 'Every month' : `Every ${n} months`} on day ${naturalList(m.days.map(String))}`;
+      text = tp(n, 'Every month on day {days}', 'Every {n} months on day {days}', { days: naturalList(m.days.map(String)) });
     } else if (m.type === 'lastDay') {
-      text = `${n === 1 ? 'Every month' : `Every ${n} months`} on the last day`;
+      text = tp(n, 'Every month on the last day', 'Every {n} months on the last day');
     } else if (m.type === 'lastWorkingDay') {
-      text = `${n === 1 ? 'Every month' : `Every ${n} months`} on the last working day`;
+      text = tp(n, 'Every month on the last working day', 'Every {n} months on the last working day');
     } else {
-      text = `${n === 1 ? 'Every month' : `Every ${n} months`} on the ${naturalList(m.positions.map(ordinal))} ${WEEKDAY_LONG[m.weekday]}`;
+      text = tp(n, 'Every month on the {positions} {day}', 'Every {n} months on the {positions} {day}', {
+        positions: naturalList(m.positions.map((p) => ordinal(p, m.weekday))), day: weekdayLong(m.weekday),
+      });
     }
   } else {
     const y = r.yearly;
-    const lead = n === 1 ? 'Every year' : `Every ${n} years`;
     if (y.type === 'dayOfMonth') {
-      text = `${lead} on ${MONTH_LONG[y.month - 1]} ${y.day}`;
+      text = tp(n, 'Every year on {month} {day}', 'Every {n} years on {month} {day}', { month: monthLong(y.month - 1), day: y.day });
     } else {
-      text = `${lead} on the ${naturalList(y.positions.map(ordinal))} ${WEEKDAY_LONG[y.weekday]} of ${MONTH_LONG[y.month - 1]}`;
+      text = tp(n, 'Every year on the {positions} {day} of {month}', 'Every {n} years on the {positions} {day} of {month}', {
+        positions: naturalList(y.positions.map((p) => ordinal(p, y.weekday))), day: weekdayLong(y.weekday), month: monthLong(y.month - 1),
+      });
     }
   }
 
-  text += `, starting ${formatKeyShort(r.startDate)}`;
+  text += t(', starting {date}', { date: formatKeyShort(r.startDate) });
   if (r.end.type === 'date') {
     const differentYear = r.end.date.slice(0, 4) !== r.startDate.slice(0, 4);
-    text += `, until ${formatKeyShort(r.end.date, differentYear)}`;
+    text += t(', until {date}', { date: formatKeyShort(r.end.date, differentYear) });
   } else if (r.end.type === 'count') {
-    text += `, for ${r.end.count} occurrence${r.end.count === 1 ? '' : 's'}`;
+    text += tp(r.end.count, ', for 1 occurrence', ', for {n} occurrences');
   }
   return text;
+}
+
+// 2 -> "2nd", 3 -> "3rd", 11 -> "11th" (only used in the English sentence "every 2nd month")
+function ordinalNumber(n) {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  return `${n}${{ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'}`;
 }
 
 module.exports = {

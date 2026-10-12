@@ -1,5 +1,6 @@
 'use strict';
 
+const { t } = require('./i18n');
 const { dateKey, addDaysToKey, addMinutes, minutesBetween } = require('./time');
 
 // A "prayer provider" is any function: (dateKey) => { fajr, dhuhr, asr, maghrib, isha }
@@ -93,7 +94,7 @@ function resolvePrayerRelative(provider, calendarDateKey, relative) {
     throw new Error(`Direction must be "before" or "after", got: ${direction}`);
   }
   if (!Number.isInteger(minutes) || minutes < 0) {
-    throw new Error('Minutes must be a whole number, 0 or more');
+    throw new Error(t('Minutes must be a whole number, 0 or more'));
   }
   const base = provider(calendarDateKey)[prayer];
   return addMinutes(base, direction === 'before' ? -minutes : minutes);
@@ -102,7 +103,7 @@ function resolvePrayerRelative(provider, calendarDateKey, relative) {
 // End Time is always Start + Duration (in minutes).
 function computeEnd(start, durationMinutes) {
   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-    throw new Error('Duration must be more than 0 minutes');
+    throw new Error(t('Duration must be more than 0 minutes'));
   }
   return addMinutes(start, durationMinutes);
 }

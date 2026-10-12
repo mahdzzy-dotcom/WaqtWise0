@@ -99,7 +99,7 @@ async function setTime(page, hour, minute, ampm) {
   });
   await step('each task is a piece on its zone bar, in its category colour, placed and sized by its time', async () => {
     const pieces = await page.$$eval('.zone.z1 .timeline .seg', (els) => els.map((e) => ({
-      title: e.title, left: parseFloat(e.style.left), width: parseFloat(e.style.width), color: e.style.backgroundColor,
+      title: e.title, left: parseFloat(e.style.insetInlineStart), width: parseFloat(e.style.width), color: e.style.backgroundColor,
     })));
     assert.equal(pieces.length, 5, 'one piece for each of the 5 tasks in the first zone');
     const study = pieces.find((p) => p.title.startsWith('Study SQL'));
@@ -532,7 +532,7 @@ async function setTime(page, hour, minute, ampm) {
   console.log('Settings');
   await step('every section is there', async () => {
     const titles = await page.$$eval('.settings-section h2', (els) => els.map((e) => e.textContent));
-    assert.deepEqual(titles, ['Prayer Times', 'Reminders & Notifications', 'Application', 'Full-screen reminder', 'Sounds', 'Categories', 'Data']);
+    assert.deepEqual(titles, ['اللغة / Language', 'Prayer Times', 'Reminders & Notifications', 'Application', 'Full-screen reminder', 'Sounds', 'Categories', 'Data']);
     await shot(page, 'settings');
   });
   await step('a custom city can be typed in (name, latitude, longitude, time zone) and the list can be used again', async () => {
@@ -994,6 +994,70 @@ async function setTime(page, hour, minute, ampm) {
     assert.equal((await mp.$$('.stats-card.kpi')).length, 4);
     assert.deepEqual(realErrors(m.errors), []);
     await m.browser.close();
+  });
+
+  console.log('Arabic');
+  await step('switching to Arabic turns the whole app right-to-left with Western digits, and back again', async () => {
+    const arService = createService();
+    exampleSeed(arService);
+    const ar = await openApp({ playwright, service: arService, executablePath, width: 1100, height: 1100 });
+    const p = ar.page;
+    await p.click('#menu-btn');
+    await p.click('button:has-text("Settings")');
+    await p.waitForSelector('.lang-switch');
+    await p.click('.lang-switch button:text-is("العربية")');
+    await p.waitForFunction(() => document.documentElement.dir === 'rtl');
+    assert.equal(await p.evaluate(() => document.documentElement.lang), 'ar');
+    assert.equal(arService.getSettings().language, 'ar');
+    assert.equal(await p.textContent('h1'), 'الإعدادات');
+    assert.equal(await p.evaluate(() => document.querySelector('.titlebar').dir || getComputedStyle(document.querySelector('.titlebar')).direction), 'ltr');
+    await shot(p, 'ar-settings');
+    const overflow = await p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    assert.equal(overflow, false, 'no sideways scrolling');
+    await p.click('.back-link');
+    await p.waitForSelector('.zone');
+    const names = await p.$$eval('.zone-name', (els) => els.map((e) => e.firstChild.textContent));
+    assert.deepEqual(names, ['الفجر ← الظهر', 'الظهر ← العصر', 'العصر ← المغرب', 'المغرب ← العشاء', 'العشاء ← الفجر']);
+    const body = await p.textContent('body');
+    assert.equal(/[٠-٩]/.test(body), false, 'digits stay 0123456789');
+    assert.match(await p.textContent('.day-title'), /(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)، \d+ \S+ \d{4}/);
+    assert.match(await p.textContent('#add-btn'), /مهمة جديدة/);
+    await shot(p, 'ar-daily');
+    await p.click('#add-btn');
+    await p.waitForSelector('.dialog');
+    await p.waitForFunction(() => Array.from(document.querySelectorAll('.readout')).every((e) => e.textContent.trim() !== ''));
+    await p.click('button:text-is("يتكرر")');
+    await p.waitForTimeout(300);
+    await shot(p, 'ar-form');
+    await p.keyboard.press('Escape');
+    await p.click('#menu-btn');
+    await p.click('button:has-text("الإحصائيات")');
+    await p.waitForSelector('.stats-card');
+    await shot(p, 'ar-stats');
+    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+    await p.click('#menu-btn');
+    await p.click('button:has-text("الإعدادات")');
+    await p.click('.lang-switch button:text-is("English")');
+    await p.waitForFunction(() => document.documentElement.dir === 'ltr');
+    assert.equal(await p.textContent('h1'), 'Settings');
+    assert.equal(arService.getSettings().language, 'en');
+    assert.deepEqual(realErrors(ar.errors), []);
+    await ar.browser.close();
+  });
+
+  await step('the full-screen reminder page follows the language (Arabic, right to left)', async () => {
+    const alert = await openAlertPage({ playwright, executablePath });
+    const base = require('../src/core').DEFAULT_ALERT_APPEARANCE;
+    const item = { id: 'x1', taskId: 't-x1', dateKey: '2026-10-04', title: 'مذاكرة SQL', notes: '', startLabel: '8:00 ص', endLabel: '9:30 ص',
+      durationLabel: '1 س 30 د', zoneName: 'Fajr → Dhuhr', zoneIndex: 1, categoryName: 'دراسة', categoryColor: '#3b82f6', priority: 'High', snoozed: false };
+    const p = alert.page;
+    await p.evaluate(([st]) => window.__render(st), [{ items: [item], appearance: base, snoozeMinutes: 5, language: 'ar', guardMs: 0 }]);
+    assert.equal(await p.evaluate(() => document.documentElement.dir), 'rtl');
+    const text = await p.textContent('body');
+    for (const part of ['تبدأ الآن', 'مذاكرة SQL', 'الفجر ← الظهر', 'أولوية عالية', 'تمام', 'تأجيل 5 دقائق', 'فتح المهمة', 'تحديد كمنجزة']) assert.ok(text.includes(part), `shows "${part}"`);
+    await shot(p, 'ar-alert');
+    assert.deepEqual(realErrors(alert.errors), []);
+    await alert.browser.close();
   });
 
   console.log('First run');

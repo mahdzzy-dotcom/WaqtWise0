@@ -1,4 +1,5 @@
 'use strict';
+const { t } = require('./i18n');
 
 // Built-in list of Egyptian cities (approximate city-centre coordinates).
 // Default city: Cairo.
@@ -55,11 +56,11 @@ function isValidTimeZone(timeZone) {
 // Returns a list of friendly messages (empty when the city is fine).
 function validateCustomCity(city) {
   const errors = [];
-  if (!city || typeof city !== 'object' || Array.isArray(city)) return ['Enter the city name, latitude, longitude and time zone'];
-  if (typeof city.name !== 'string' || city.name.trim() === '' || city.name.trim().length > 40) errors.push('The city name must be 1 to 40 characters');
-  if (typeof city.latitude !== 'number' || !Number.isFinite(city.latitude) || city.latitude < -90 || city.latitude > 90) errors.push('Latitude must be a number from -90 to 90');
-  if (typeof city.longitude !== 'number' || !Number.isFinite(city.longitude) || city.longitude < -180 || city.longitude > 180) errors.push('Longitude must be a number from -180 to 180');
-  if (!isValidTimeZone(city.timeZone)) errors.push('The time zone is not valid. Use a name like Asia/Riyadh or Europe/London');
+  if (!city || typeof city !== 'object' || Array.isArray(city)) return [t('Enter the city name, latitude, longitude and time zone')];
+  if (typeof city.name !== 'string' || city.name.trim() === '' || city.name.trim().length > 40) errors.push(t('The city name must be 1 to 40 characters'));
+  if (typeof city.latitude !== 'number' || !Number.isFinite(city.latitude) || city.latitude < -90 || city.latitude > 90) errors.push(t('Latitude must be a number from -90 to 90'));
+  if (typeof city.longitude !== 'number' || !Number.isFinite(city.longitude) || city.longitude < -180 || city.longitude > 180) errors.push(t('Longitude must be a number from -180 to 180'));
+  if (!isValidTimeZone(city.timeZone)) errors.push(t('The time zone is not valid. Use a name like Asia/Riyadh or Europe/London'));
   return errors;
 }
 

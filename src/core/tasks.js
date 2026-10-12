@@ -39,6 +39,7 @@ const {
   resolvePrayerRelative,
   computeEnd,
 } = require('./zones');
+const { t } = require('./i18n');
 const { normalizeRule, validateRule, generateDates } = require('./recurrence');
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
@@ -52,58 +53,58 @@ function clone(value) {
 // ---- Validation --------------------------------------------------------------------------
 
 function validateStart(start) {
-  if (!start || typeof start !== 'object') return ['Start time is missing'];
+  if (!start || typeof start !== 'object') return [t('Start time is missing')];
   if (start.mode === 'fixed') {
-    return /^([01]\d|2[0-3]):[0-5]\d$/.test(start.time || '') ? [] : ['Start time must look like 09:00'];
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(start.time || '') ? [] : [t('Start time must look like 09:00')];
   }
   if (start.mode === 'prayer') {
     const errors = [];
-    if (!PRAYERS.includes(start.prayer)) errors.push('Choose a prayer (Fajr, Dhuhr, Asr, Maghrib or Isha)');
-    if (start.direction !== 'before' && start.direction !== 'after') errors.push('Choose Before or After the prayer');
-    if (!Number.isInteger(start.minutes) || start.minutes < 0) errors.push('Minutes must be a whole number, 0 or more');
+    if (!PRAYERS.includes(start.prayer)) errors.push(t('Choose a prayer (Fajr, Dhuhr, Asr, Maghrib or Isha)'));
+    if (start.direction !== 'before' && start.direction !== 'after') errors.push(t('Choose Before or After the prayer'));
+    if (!Number.isInteger(start.minutes) || start.minutes < 0) errors.push(t('Minutes must be a whole number, 0 or more'));
     return errors;
   }
   if (start.mode === 'task') {
     const errors = [];
-    if (typeof start.taskId !== 'string' || start.taskId === '') errors.push('Choose the task this one should follow');
-    if (start.point !== 'start' && start.point !== 'end') errors.push('Choose the start or the end of that task');
-    if (start.direction !== 'before' && start.direction !== 'after') errors.push('Choose Before or After that task');
-    if (!Number.isInteger(start.minutes) || start.minutes < 0) errors.push('Minutes must be a whole number, 0 or more');
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start.fallbackTime || '')) errors.push('Choose a backup start time');
+    if (typeof start.taskId !== 'string' || start.taskId === '') errors.push(t('Choose the task this one should follow'));
+    if (start.point !== 'start' && start.point !== 'end') errors.push(t('Choose the start or the end of that task'));
+    if (start.direction !== 'before' && start.direction !== 'after') errors.push(t('Choose Before or After that task'));
+    if (!Number.isInteger(start.minutes) || start.minutes < 0) errors.push(t('Minutes must be a whole number, 0 or more'));
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start.fallbackTime || '')) errors.push(t('Choose a backup start time'));
     return errors;
   }
-  return ['Start time must be a fixed time, relative to a prayer, or relative to another task'];
+  return [t('Start time must be a fixed time, relative to a prayer, or relative to another task')];
 }
 
 function validateDuration(minutes) {
-  return Number.isInteger(minutes) && minutes > 0 ? [] : ['Duration must be a whole number of minutes, more than 0'];
+  return Number.isInteger(minutes) && minutes > 0 ? [] : [t('Duration must be a whole number of minutes, more than 0')];
 }
 
 function validateReminders(reminders) {
   if (!reminders) return [];
   const offsets = reminders.offsets || [];
   if (!Array.isArray(offsets) || !offsets.every((o) => Number.isInteger(o) && o >= 0)) {
-    return ['Reminder times must be whole minutes, 0 or more'];
+    return [t('Reminder times must be whole minutes, 0 or more')];
   }
   if ('fullScreen' in reminders && typeof reminders.fullScreen !== 'boolean') {
-    return ['The full-screen alert must be on or off'];
+    return [t('The full-screen alert must be on or off')];
   }
   return [];
 }
 
 function validateTask(task) {
   const errors = [];
-  if (!task || typeof task.id !== 'string' || task.id === '') errors.push('Task needs an id');
-  if (!task || typeof task.title !== 'string' || task.title.trim() === '') errors.push('Please enter a title');
+  if (!task || typeof task.id !== 'string' || task.id === '') errors.push(t('Task needs an id'));
+  if (!task || typeof task.title !== 'string' || task.title.trim() === '') errors.push(t('Please enter a title'));
   if (!task) return errors;
   errors.push(...validateStart(task.start));
   errors.push(...validateDuration(task.durationMinutes));
   errors.push(...validateReminders(task.reminders));
-  if (!PRIORITIES.includes(task.priority)) errors.push('Priority must be Low, Medium or High');
+  if (!PRIORITIES.includes(task.priority)) errors.push(t('Priority must be Low, Medium or High'));
   if (task.recurrence) {
     errors.push(...validateRule(task.recurrence));
   } else if (!isValidKey(task.date)) {
-    errors.push('Please choose a date');
+    errors.push(t('Please choose a date'));
   }
   return errors;
 }
@@ -140,9 +141,9 @@ function createTask(input) {
 
 const MAX_CHAIN = 25;
 const WARNINGS = {
-  missing: 'The task it follows is not on this day, so the backup start time is used.',
-  loop: 'This task and the one it follows depend on each other, so the backup start time is used.',
-  inherited: 'A task earlier in this chain is not on this day, so this time is based on its backup start time.',
+  get missing() { return t('The task it follows is not on this day, so the backup start time is used.'); },
+  get loop() { return t('This task and the one it follows depend on each other, so the backup start time is used.'); },
+  get inherited() { return t('A task earlier in this chain is not on this day, so this time is based on its backup start time.'); },
 };
 
 function fallbackStart(start, dateKey, warning) {
@@ -300,7 +301,7 @@ function placementNote(provider, start, enteredDateKey) {
     zoneIndex: derived.zoneIndex,
     zoneName: derived.zoneName,
     differsFromDate: derived.planningDayKey !== enteredDateKey,
-    text: `Will appear under Planning Day: ${formatKeyShort(derived.planningDayKey)} → ${formatKeyShort(endKey)}, Zone: ${derived.zoneName}`,
+    text: t('Will appear under Planning Day: {from} → {to}, Zone: {zone}', { from: formatKeyShort(derived.planningDayKey), to: formatKeyShort(endKey), zone: t(derived.zoneName) }),
   };
 }
 
@@ -322,7 +323,7 @@ function setCompletion(task, dateKey, done, when = new Date()) {
 }
 
 function addOccurrence(task, dateKey) {
-  if (!isValidKey(dateKey)) throw new Error('Please choose a valid date');
+  if (!isValidKey(dateKey)) throw new Error(t('Please choose a valid date'));
   const updated = clone(task);
   updated.exceptions = updated.exceptions.filter((k) => k !== dateKey);
   if (!updated.additions.includes(dateKey)) updated.additions.push(dateKey);
@@ -342,11 +343,11 @@ function pickFields(patch) {
 
 function checkPatch(fields) {
   const errors = [];
-  if ('title' in fields && String(fields.title).trim() === '') errors.push('Please enter a title');
+  if ('title' in fields && String(fields.title).trim() === '') errors.push(t('Please enter a title'));
   if ('start' in fields) errors.push(...validateStart(fields.start));
   if ('durationMinutes' in fields) errors.push(...validateDuration(fields.durationMinutes));
   if ('reminders' in fields) errors.push(...validateReminders(fields.reminders));
-  if ('priority' in fields && !PRIORITIES.includes(fields.priority)) errors.push('Priority must be Low, Medium or High');
+  if ('priority' in fields && !PRIORITIES.includes(fields.priority)) errors.push(t('Priority must be Low, Medium or High'));
   if (errors.length) throw new Error(errors.join('; '));
 }
 
@@ -394,7 +395,7 @@ function editTask(task, scope, dateKey, patch, options = {}) {
   }
 
   if (scope === 'this') {
-    if ('recurrence' in patch) throw new Error('The repeat pattern cannot be changed for a single occurrence');
+    if ('recurrence' in patch) throw new Error(t('The repeat pattern cannot be changed for a single occurrence'));
     const updated = clone(task);
     updated.overrides[dateKey] = { ...(updated.overrides[dateKey] || {}), ...clone(fields) };
     return { updated: assertValid(updated), created: null };
@@ -411,7 +412,7 @@ function editTask(task, scope, dateKey, patch, options = {}) {
   }
 
   // scope === 'following': split the task at dateKey.
-  if (!options.newId) throw new Error('Editing "this and following" needs a new task id');
+  if (!options.newId) throw new Error(t('Editing "this and following" needs a new task id'));
   const dayBefore = addDaysToKey(dateKey, -1);
   const occurrencesBefore = generateDates(rule, rule.startDate, dayBefore, options).length;
 
@@ -508,8 +509,8 @@ function dependencyProblem(tasks, task) {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   byId.set(task.id, task);
   for (const refId of referencedTaskIds(task)) {
-    if (refId === task.id) return 'A task cannot start relative to itself.';
-    if (!byId.has(refId)) return 'The task this one follows no longer exists. Please choose another.';
+    if (refId === task.id) return t('A task cannot start relative to itself.');
+    if (!byId.has(refId)) return t('The task this one follows no longer exists. Please choose another.');
   }
   const visiting = new Set();
   const finished = new Set();
@@ -527,7 +528,7 @@ function dependencyProblem(tasks, task) {
     finished.add(id);
     return false;
   };
-  if (loops(task.id)) return 'These tasks would follow each other in a circle. Please choose a different task to follow.';
+  if (loops(task.id)) return t('These tasks would follow each other in a circle. Please choose a different task to follow.');
   return null;
 }
 

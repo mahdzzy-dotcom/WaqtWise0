@@ -22,6 +22,10 @@ Full specification: WaqtWise_Spec.md (kept outside this folder).
 - **Build Windows installer**: builds `WaqtWise-Setup-<version>.exe`. Open the Actions tab, click the
   newest "Build Windows installer" run, and download "WaqtWise-Installer" at the bottom of the page.
 
+## Languages
+
+English and Arabic (Settings -> Language). Arabic is a full right-to-left screen; numbers are always 0123456789. The texts live in `src/core/i18n-ar.js` (the English text is the key). `node tools/i18n-scan.js` lists every text, and `tests/i18n.test.js` fails if a text has no Arabic or an Arabic text is no longer used.
+
 ## Start time options
 
 Fixed Time, Relative to Prayer, and Relative to Task ("15 minutes after the end of <task>").

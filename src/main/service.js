@@ -4,12 +4,15 @@
 // It has no Electron in it, so it is tested directly and used by the screenshot tool.
 // Everything it returns is plain data (text, numbers, lists) that can cross into the window.
 
+const i18n = require('../core/i18n');
+require('../core/i18n-ar'); // registers the Arabic texts
+const { t } = i18n;
 const crypto = require('crypto');
 const core = require('../core');
 const { copy } = require('./planner/util');
 const { formatTime12InZone } = require('../core/time');
 
-const { CITIES, resolveCity, METHOD_KEYS, METHOD_LABELS, currentPlanningDayKey, createPrayerProvider } = core;
+const { CITIES, localCategoryName, resolveCity, METHOD_KEYS, METHOD_LABELS, currentPlanningDayKey, createPrayerProvider } = core;
 
 function defaultProviderFactory(settings) {
   const city = resolveCity(settings);
@@ -32,6 +35,17 @@ class PlannerService {
     this.onSettingsChanged = deps.onSettingsChanged || (() => {});
     this.data = this.store.load();
     this.providerCache = null;
+    this.applyLanguage();
+  }
+
+  // The texts the service writes (labels, messages) follow the language chosen in Settings.
+  applyLanguage() {
+    i18n.setLanguage(this.settings.language);
+  }
+
+  // Categories as the window shows them (the built-in names are translated).
+  categoriesForView() {
+    return this.data.categories.map((c) => ({ ...c, name: localCategoryName(c) }));
   }
 
   // ---- basics -----------------------------------------------------------------------------------------
@@ -86,7 +100,7 @@ class PlannerService {
 
   findTask(taskId) {
     const task = this.data.tasks.find((t) => t.id === taskId);
-    if (!task) throw new Error('This task no longer exists.');
+    if (!task) throw new Error(t('This task no longer exists.'));
     return task;
   }
 
@@ -100,9 +114,9 @@ class PlannerService {
     this.freezePast();
     return {
       settings: copy(this.settings),
-      categories: copy(this.data.categories),
+      categories: this.categoriesForView(),
       cities: CITIES.map((c) => c.name),
-      methods: METHOD_KEYS.map((key) => ({ key, label: METHOD_LABELS[key] })),
+      methods: METHOD_KEYS.map((key) => ({ key, label: t(METHOD_LABELS[key]) })),
       currentPlanningDayKey: currentPlanningDayKey(this.provider(), this.now()),
       city: this.cityInfo(),
       loadNotes: copy(this.store.loadNotes || []),

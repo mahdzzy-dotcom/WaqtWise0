@@ -6,6 +6,34 @@
 (function () {
   const WW = (window.WW = window.WW || {});
 
+  // Languages: T('English text', { params }) gives the sentence in the language chosen in Settings.
+  const i18n = window.WWI18n;
+  WW.T = i18n.t;
+  WW.TP = i18n.tp;
+  // "Fajr → Dhuhr" -> "Fajr" (also for the Arabic arrow)
+  WW.arrowHead = (name) => String(name).split(/ [→←] /)[0];
+  WW.isRtl = () => i18n.isRtl();
+  // 'prev' / 'next' arrows point the other way when the screen reads right to left.
+  WW.arrowIcon = (which) => ((which === 'prev') === !i18n.isRtl() ? 'left' : 'right');
+
+  // Applies a language to the whole page: text direction, the language of the page, and the fixed texts.
+  WW.applyLanguage = function applyLanguage(code) {
+    const language = i18n.setLanguage(code);
+    document.documentElement.lang = language;
+    document.documentElement.dir = i18n.isRtl() ? 'rtl' : 'ltr';
+    // The English text is kept on the element the first time, so the language can be switched back and forth.
+    const key = (el, name, current) => {
+      if (el.dataset[name] === undefined) el.dataset[name] = current;
+      return el.dataset[name];
+    };
+    for (const el of document.querySelectorAll('[data-t]')) el.textContent = i18n.t(key(el, 'tKey', el.textContent));
+    for (const el of document.querySelectorAll('[data-t-title]')) el.title = i18n.t(key(el, 'tTitleKey', el.title));
+    for (const el of document.querySelectorAll('[data-t-label]')) el.setAttribute('aria-label', i18n.t(key(el, 'tLabelKey', el.getAttribute('aria-label') || '')));
+    const title = document.querySelector('title[data-t]');
+    if (title) document.title = i18n.t(title.dataset.tKey);
+    return language;
+  };
+
   // h('div', { class: 'x', onclick: fn, dataset: {a: 1} }, 'text', childNode, [more])
   WW.h = function h(tag, props, ...children) {
     const el = document.createElement(tag);
@@ -98,7 +126,7 @@
     const previousFocus = document.activeElement;
     const body = WW.h('div', { class: 'dialog-body' });
     const footer = WW.h('div', { class: 'dialog-footer' });
-    const closeBtn = WW.h('button', { class: 'icon-btn', 'aria-label': 'Close', text: '✕' });
+    const closeBtn = WW.h('button', { class: 'icon-btn', 'aria-label': WW.T('Close'), text: '✕' });
     const box = WW.h(
       'div',
       { class: `dialog ${wide ? 'wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
@@ -170,12 +198,12 @@
         },
       });
       const options = [
-        { value: 'this', label: 'This occurrence only', disabled: allowThis === false },
-        { value: 'following', label: 'This and following occurrences' },
-        { value: 'all', label: 'All occurrences' },
+        { value: 'this', label: WW.T('This occurrence only'), disabled: allowThis === false },
+        { value: 'following', label: WW.T('This and following occurrences') },
+        { value: 'all', label: WW.T('All occurrences') },
       ];
       let chosen = options.find((o) => !o.disabled).value;
-      dlg.body.appendChild(WW.h('p', { class: 'dialog-message', text: `${verb} which occurrences of this repeating task?` }));
+      dlg.body.appendChild(WW.h('p', { class: 'dialog-message', text: WW.T('{verb} which occurrences of this repeating task?', { verb: WW.T(verb) }) }));
       for (const option of options) {
         dlg.body.appendChild(
           WW.h(
@@ -193,13 +221,13 @@
         );
       }
       if (allowThis === false) {
-        dlg.body.appendChild(WW.h('p', { class: 'hint', text: 'The repeat pattern can only be changed for all or following occurrences.' }));
+        dlg.body.appendChild(WW.h('p', { class: 'hint', text: WW.T('The repeat pattern can only be changed for all or following occurrences.') }));
       }
-      dlg.footer.appendChild(WW.h('button', { class: 'btn', text: 'Cancel', onclick: () => dlg.close() }));
+      dlg.footer.appendChild(WW.h('button', { class: 'btn', text: WW.T('Cancel'), onclick: () => dlg.close() }));
       dlg.footer.appendChild(
         WW.h('button', {
           class: 'btn primary',
-          text: verb === 'Delete' ? 'Delete' : 'Save',
+          text: verb === 'Delete' ? WW.T('Delete') : WW.T('Save'),
           onclick: () => {
             answered = true;
             dlg.close();

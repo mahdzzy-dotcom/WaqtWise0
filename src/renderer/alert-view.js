@@ -4,7 +4,7 @@
 
 (function () {
   const WW = (window.WW = window.WW || {});
-  const { h, clear } = WW;
+  const { h, clear, T, TP } = WW;
 
   function fontStack(name) {
     return `'${name}', 'Segoe UI', Tahoma, Arial, sans-serif`;
@@ -27,7 +27,7 @@
   function render(root, state, handlers) {
     const { item, appearance: a } = state;
     const frame = h('div', { class: 'alert-frame' });
-    const stage = h('div', { class: 'alert-stage', role: 'alertdialog', 'aria-label': `Reminder: ${item.title}` });
+    const stage = h('div', { class: 'alert-stage', role: 'alertdialog', 'aria-label': T('Reminder: {title}', { title: item.title }) });
     applyAppearance(stage, a);
 
     const name = h('h1', { class: 'alert-name', text: item.title });
@@ -39,7 +39,7 @@
       textTransform: a.name.uppercase ? 'uppercase' : 'none',
     });
 
-    const parts = [h('div', { class: 'alert-label', text: item.snoozed ? 'Snoozed reminder' : 'Starts now' }), name];
+    const parts = [h('div', { class: 'alert-label', text: item.snoozed ? T('Snoozed reminder') : T('Starts now') }), name];
 
     if (a.notes.show && item.notes && item.notes.trim() !== '') {
       const notes = h('div', { class: 'alert-notes', text: item.notes });
@@ -55,24 +55,24 @@
     const chips = [];
     if (a.show.time) chips.push(h('span', { class: 'chip' }, h('b', { text: item.startLabel }), `– ${item.endLabel}`));
     if (a.show.duration) chips.push(h('span', { class: 'chip', text: item.durationLabel }));
-    if (a.show.zone && item.zoneName) chips.push(h('span', { class: 'chip', text: `Zone: ${item.zoneName}` }));
+    if (a.show.zone && item.zoneName) chips.push(h('span', { class: 'chip', text: T('Zone: {zone}', { zone: T(item.zoneName) }) }));
     if (a.show.category && item.categoryName) {
       chips.push(h('span', { class: 'chip' }, h('span', { class: 'dot', style: { background: item.categoryColor || a.textColor } }), item.categoryName));
     }
-    if (a.show.priority) chips.push(h('span', { class: 'chip', text: `${item.priority} priority` }));
+    if (a.show.priority) chips.push(h('span', { class: 'chip', text: T('{priority} priority', { priority: T(item.priority) }) }));
     if (chips.length) parts.push(h('div', { class: 'alert-info' }, chips));
 
     const act = (key) => () => { if (handlers && handlers[key] && !state.guardActive) handlers[key](); };
     const button = (label, key, primary) =>
       h('button', { type: 'button', class: primary ? 'primary' : '', text: label, disabled: state.guardActive, onclick: act(key), dataset: { action: key } });
     parts.push(h('div', { class: 'alert-actions' },
-      button('Got it', 'dismiss', true),
-      button(`Snooze ${state.snoozeMinutes} min`, 'snooze', false),
-      button('Open task', 'open', false),
-      button('Mark as Done', 'done', false)));
+      button(T('Got it'), 'dismiss', true),
+      button(TP(state.snoozeMinutes, 'Snooze {n} minute', 'Snooze {n} minutes'), 'snooze', false),
+      button(T('Open task'), 'open', false),
+      button(T('Mark as Done'), 'done', false)));
 
     if (state.remaining > 0) {
-      parts.push(h('div', { class: 'alert-more', text: state.remaining === 1 ? '1 more task starting now' : `${state.remaining} more tasks starting now` }));
+      parts.push(h('div', { class: 'alert-more', text: TP(state.remaining, '{n} more task starting now', '{n} more tasks starting now') }));
     }
 
     stage.append(...parts);

@@ -3,6 +3,7 @@
 // Application settings (spec 12.4): defaults and validation.
 // Reminder-related settings share their names with DEFAULT_REMINDER_SETTINGS.
 
+const { t } = require('./i18n');
 const { CITIES, DEFAULT_CITY, validateCustomCity } = require('./cities');
 const { PRAYERS } = require('./zones');
 const { DEFAULT_REMINDER_SETTINGS } = require('./reminders');
@@ -186,6 +187,7 @@ const DEFAULT_SETTINGS = {
   backgroundMessageShown: false,
   welcomeShown: false, // the first-run "choose your city" screen
   theme: 'system',
+  language: 'en', // 'en' English or 'ar' Arabic (right to left)
   workingDays: [0, 1, 2, 3, 4], // Sunday - Thursday
   weekStart: 0, // first day of the week: 6 Saturday, 0 Sunday or 1 Monday
   // Full-screen reminder at the exact start time
@@ -211,42 +213,43 @@ function isWholeNumber(n, min, max) {
 function validateSettings(settings) {
   const errors = [];
   const s = settings;
-  if ('cityName' in s && !CITIES.some((c) => c.name === s.cityName)) errors.push('Please choose a city from the list');
+  if ('cityName' in s && !CITIES.some((c) => c.name === s.cityName)) errors.push(t('Please choose a city from the list'));
   if ('customCity' in s && s.customCity !== null) errors.push(...validateCustomCity(s.customCity));
-  if ('method' in s && !METHOD_KEYS.includes(s.method)) errors.push('Please choose a calculation method from the list');
+  if ('method' in s && !METHOD_KEYS.includes(s.method)) errors.push(t('Please choose a calculation method from the list'));
   if ('adjustments' in s) {
     for (const prayer of PRAYERS) {
       if (s.adjustments && prayer in s.adjustments && !isWholeNumber(s.adjustments[prayer], -120, 120)) {
-        errors.push(`The ${prayer} adjustment must be a whole number of minutes between -120 and 120`);
+        errors.push(t('The {prayer} adjustment must be a whole number of minutes between -120 and 120', { prayer: t(prayer[0].toUpperCase() + prayer.slice(1)) }));
       }
     }
   }
-  if ('hijriAdjustment' in s && ![-1, 0, 1].includes(s.hijriAdjustment)) errors.push('Hijri adjustment must be -1, 0 or +1');
-  if ('theme' in s && !THEMES.includes(s.theme)) errors.push('Theme must be Light, Dark or System');
+  if ('hijriAdjustment' in s && ![-1, 0, 1].includes(s.hijriAdjustment)) errors.push(t('Hijri adjustment must be -1, 0 or +1'));
+  if ('language' in s && !['en', 'ar'].includes(s.language)) errors.push(t('Choose English or Arabic'));
+  if ('theme' in s && !THEMES.includes(s.theme)) errors.push(t('Theme must be Light, Dark or System'));
   if ('defaultReminderOffsetMinutes' in s && !isWholeNumber(s.defaultReminderOffsetMinutes, 0, 10080)) {
-    errors.push('Default reminder time must be a whole number of minutes (0 or more)');
+    errors.push(t('Default reminder time must be a whole number of minutes (0 or more)'));
   }
   if ('snoozeMinutes' in s && !isWholeNumber(s.snoozeMinutes, 1, 1440)) {
-    errors.push('Snooze time must be a whole number of minutes (1 or more)');
+    errors.push(t('Snooze time must be a whole number of minutes (1 or more)'));
   }
   if ('workingDays' in s) {
     if (!Array.isArray(s.workingDays) || s.workingDays.length === 0 || !s.workingDays.every((d) => isWholeNumber(d, 0, 6))) {
-      errors.push('Choose at least one working day');
+      errors.push(t('Choose at least one working day'));
     }
   }
-  if ('doneSound' in s && !DONE_SOUNDS.includes(s.doneSound)) errors.push('Choose one of the sounds in the list');
-  if ('alertSound' in s && !ALERT_SOUNDS.includes(s.alertSound)) errors.push('Choose one of the sounds in the list');
+  if ('doneSound' in s && !DONE_SOUNDS.includes(s.doneSound)) errors.push(t('Choose one of the sounds in the list'));
+  if ('alertSound' in s && !ALERT_SOUNDS.includes(s.alertSound)) errors.push(t('Choose one of the sounds in the list'));
   for (const key of ['doneSoundVolume', 'alertSoundVolume']) {
-    if (key in s && !isWholeNumber(s[key], 0, 100)) errors.push('Volume must be a whole number from 0 to 100');
+    if (key in s && !isWholeNumber(s[key], 0, 100)) errors.push(t('Volume must be a whole number from 0 to 100'));
   }
   if ('statsCharts' in s) {
     const list = s.statsCharts;
     if (!Array.isArray(list) || !list.every((id) => STATS_CHART_IDS.includes(id)) || new Set(list).size !== list.length) {
-      errors.push('Choose charts from the list, each one only once');
+      errors.push(t('Choose charts from the list, each one only once'));
     }
   }
-  if ('weekStart' in s && ![6, 0, 1].includes(s.weekStart)) errors.push('Choose Saturday, Sunday or Monday as the first day of the week');
-  if ('alertScreens' in s && !ALERT_SCREENS.includes(s.alertScreens)) errors.push('Choose all screens or the main screen');
+  if ('weekStart' in s && ![6, 0, 1].includes(s.weekStart)) errors.push(t('Choose Saturday, Sunday or Monday as the first day of the week'));
+  if ('alertScreens' in s && !ALERT_SCREENS.includes(s.alertScreens)) errors.push(t('Choose all screens or the main screen'));
   if ('alertAppearance' in s) errors.push(...validateAppearance(s.alertAppearance));
   for (const key of ['notificationsEnabled', 'soundEnabled', 'zoneStartNotifications', 'startWithWindows', 'showBackgroundMessage', 'backgroundMessageShown', 'welcomeShown', 'fullScreenAlerts', 'fullScreenDefaultForNewTasks', 'alertSoundRepeat', 'useCustomCity']) {
     if (key in s && typeof s[key] !== 'boolean') errors.push(`${key} must be on or off`);
@@ -260,7 +263,7 @@ function mergeSettings(current, patch) {
   if (errors.length) throw new Error(errors.join('; '));
   const merged = { ...current, ...patch };
   if (patch.customCity) merged.customCity = { ...patch.customCity, name: patch.customCity.name.trim(), timeZone: patch.customCity.timeZone.trim() };
-  if (merged.useCustomCity && !merged.customCity) throw new Error('Enter the city name, latitude, longitude and time zone first');
+  if (merged.useCustomCity && !merged.customCity) throw new Error(t('Enter the city name, latitude, longitude and time zone first'));
   merged.adjustments = { ...current.adjustments, ...(patch.adjustments || {}) };
   if (patch.workingDays) merged.workingDays = Array.from(new Set(patch.workingDays)).sort((a, b) => a - b);
   if (patch.alertAppearance) merged.alertAppearance = mergeAppearance(current.alertAppearance, patch.alertAppearance);

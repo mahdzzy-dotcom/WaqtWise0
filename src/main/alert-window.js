@@ -27,6 +27,7 @@ function createAlertManager({ BrowserWindow, screen, preloadPath, pagePath, getC
       items,
       appearance: config.appearance,
       snoozeMinutes: config.snoozeMinutes,
+      language: config.language || 'en',
       guardMs,
       sound: config.sound || { id: 'off', volume: 0, repeat: false },
       soundSeq,

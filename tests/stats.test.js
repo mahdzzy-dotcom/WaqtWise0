@@ -348,7 +348,7 @@ test('the service records the time of the tick, using its own clock', () => {
 
 test('the list of charts: the settings list and the screen agree, all are shown by default, and bad lists are refused', () => {
   const screen = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'stats.js'), 'utf8');
-  const listed = Array.from(screen.matchAll(/\['([a-z-]+)', '([^']+)', '([^']+)'\]/g)).map((m) => [m[1], m[2], m[3]]);
+  const listed = Array.from(screen.matchAll(/\['([a-z-]+)', T\('([^']+)'\), T\('([^']+)'\)\]/g)).map((m) => [m[1], m[2], m[3]]);
   assert.deepEqual(listed, STATS_CHARTS.map((c) => [c.id, c.title, c.about]));
   assert.deepEqual(DEFAULT_SETTINGS.statsCharts, STATS_CHART_IDS);
   assert.notEqual(DEFAULT_SETTINGS.statsCharts, STATS_CHART_IDS, 'the default is a copy');
