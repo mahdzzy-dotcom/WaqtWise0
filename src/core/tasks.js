@@ -42,6 +42,7 @@ const {
 const { t } = require('./i18n');
 const { normalizeRule, validateRule, generateDates } = require('./recurrence');
 
+const { MAX_DURATION_MINUTES, MAX_OFFSET_MINUTES } = require('./limits');
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const SCOPES = ['this', 'following', 'all'];
 const EDITABLE_FIELDS = ['title', 'start', 'durationMinutes', 'notes', 'priority', 'categoryId', 'reminders'];
@@ -61,7 +62,7 @@ function validateStart(start) {
     const errors = [];
     if (!PRAYERS.includes(start.prayer)) errors.push(t('Choose a prayer (Fajr, Dhuhr, Asr, Maghrib or Isha)'));
     if (start.direction !== 'before' && start.direction !== 'after') errors.push(t('Choose Before or After the prayer'));
-    if (!Number.isInteger(start.minutes) || start.minutes < 0) errors.push(t('Minutes must be a whole number, 0 or more'));
+    if (!Number.isInteger(start.minutes) || start.minutes < 0 || start.minutes > MAX_OFFSET_MINUTES) errors.push(t('Minutes must be a whole number from 0 to {max}', { max: MAX_OFFSET_MINUTES }));
     return errors;
   }
   if (start.mode === 'task') {
@@ -77,14 +78,16 @@ function validateStart(start) {
 }
 
 function validateDuration(minutes) {
-  return Number.isInteger(minutes) && minutes > 0 ? [] : [t('Duration must be a whole number of minutes, more than 0')];
+  return Number.isInteger(minutes) && minutes > 0 && minutes <= MAX_DURATION_MINUTES
+    ? []
+    : [t('Duration must be a whole number of minutes, from 1 to {max}', { max: MAX_DURATION_MINUTES })];
 }
 
 function validateReminders(reminders) {
   if (!reminders) return [];
   const offsets = reminders.offsets || [];
-  if (!Array.isArray(offsets) || !offsets.every((o) => Number.isInteger(o) && o >= 0)) {
-    return [t('Reminder times must be whole minutes, 0 or more')];
+  if (!Array.isArray(offsets) || !offsets.every((o) => Number.isInteger(o) && o >= 0 && o <= MAX_OFFSET_MINUTES)) {
+    return [t('Reminder times must be whole minutes from 0 to {max}', { max: MAX_OFFSET_MINUTES })];
   }
   if ('fullScreen' in reminders && typeof reminders.fullScreen !== 'boolean') {
     return [t('The full-screen alert must be on or off')];
@@ -600,6 +603,8 @@ module.exports = {
   PRIORITIES,
   SCOPES,
   validateStart,
+  validateDuration,
+  validateReminders,
   validateTask,
   createTask,
   startAtDate,

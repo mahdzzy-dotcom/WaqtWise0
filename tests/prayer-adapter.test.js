@@ -14,6 +14,11 @@ try {
   adhanAvailable = false;
 }
 
+// On GitHub (REQUIRE_ADHAN=1) a missing library must fail the run, not skip the prayer-time tests quietly.
+test('the prayer-time library is installed when the run requires it', { skip: !process.env.REQUIRE_ADHAN }, () => {
+  assert.equal(adhanAvailable, true, 'adhan is not installed, so the prayer-time tests would be skipped');
+});
+
 const { createPrayerProvider } = adhanAvailable ? require('../src/core/prayer-adapter') : {};
 const { CITIES, findCity, DEFAULT_CITY } = require('../src/core/cities');
 const { deriveZone, getBoundaries, getZones, PRAYERS } = require('../src/core');

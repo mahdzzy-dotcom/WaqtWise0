@@ -178,14 +178,14 @@
           h('option', { value: 'before', text: T('before'), selected: f.start.direction === 'before' }),
           h('option', { value: 'after', text: T('after'), selected: f.start.direction === 'after' }));
         const mins = h('input', {
-          type: 'number', class: 'num', min: '0', value: String(f.start.minutes), 'aria-label': T('Minutes'),
+          type: 'number', class: 'num', min: '0', max: '10080', value: String(f.start.minutes), 'aria-label': T('Minutes'),
           oninput: (e) => { f.start.minutes = e.target.value === '' ? NaN : Number(e.target.value); changed(); },
         });
         startBox.appendChild(h('div', { class: 'row', style: { marginTop: '10px' } }, mins, h('span', { text: T('minutes') }), dirSel, prayerSel));
       } else {
         // Relative to another task: "15 minutes after the end of <task>"
         const mins = h('input', {
-          type: 'number', class: 'num', min: '0', value: String(f.start.minutes), 'aria-label': T('Minutes'),
+          type: 'number', class: 'num', min: '0', max: '10080', value: String(f.start.minutes), 'aria-label': T('Minutes'),
           oninput: (e) => { f.start.minutes = e.target.value === '' ? NaN : Number(e.target.value); changed(); },
         });
         const dirSel = h('select', { class: 'sel-auto', 'aria-label': T('Before or after'), onchange: (e) => { f.start.direction = e.target.value; changed(); } },
@@ -209,7 +209,7 @@
 
     // ---- duration ----
     const hoursInput = h('input', {
-      type: 'number', class: 'num', min: '0', value: String(Math.floor(f.durationMinutes / 60)), 'aria-label': T('Duration hours'),
+      type: 'number', class: 'num', min: '0', max: '168', value: String(Math.floor(f.durationMinutes / 60)), 'aria-label': T('Duration hours'),
       oninput: updateDuration,
     });
     const minutesInput = h('input', {
@@ -357,7 +357,7 @@
         radio('never', T('Never ends')),
         radio('date', T('Ends on'), h('input', { type: 'date', class: 'sel-auto', value: r.end.date || '', 'aria-label': T('End date'), oninput: (e) => { r.end.date = e.target.value; changed(); } })),
         radio('count', T('Ends after'), h('span', { class: 'row tight' },
-          h('input', { type: 'number', class: 'num', min: '1', value: String(r.end.count), 'aria-label': T('Number of occurrences'), oninput: (e) => { r.end.count = Number(e.target.value); changed(); } }),
+          h('input', { type: 'number', class: 'num', min: '1', max: '9999', value: String(r.end.count), 'aria-label': T('Number of occurrences'), oninput: (e) => { r.end.count = Number(e.target.value); changed(); } }),
           h('span', { text: T('occurrences') }))));
     }
 
@@ -389,7 +389,7 @@
       const box = h('div', { class: 'box' },
         h('div', { class: 'row', style: { marginBottom: '10px' } },
           h('span', { text: T('Every') }),
-          h('input', { type: 'number', class: 'num', min: '1', value: String(r.interval), 'aria-label': T('Repeat every'), oninput: (e) => { r.interval = e.target.value === '' ? NaN : Number(e.target.value); changed(); } }),
+          h('input', { type: 'number', class: 'num', min: '1', max: '999', value: String(r.interval), 'aria-label': T('Repeat every'), oninput: (e) => { r.interval = e.target.value === '' ? NaN : Number(e.target.value); changed(); } }),
           unitSel));
 
       if (r.frequency === 'weekly') {
@@ -445,7 +445,7 @@
         remindersBox.appendChild(h('p', { class: 'hint', text: T('No custom times: the default reminder ({what}) will be used.', { what: offsetLabel(settings.defaultReminderOffsetMinutes).toLowerCase() }) }));
       }
 
-      const amount = h('input', { type: 'number', class: 'num', min: '0', value: '15', 'aria-label': T('Reminder amount') });
+      const amount = h('input', { type: 'number', class: 'num', min: '0', max: '10080', value: '15', 'aria-label': T('Reminder amount') });
       const unit = h('select', { class: 'sel-auto', 'aria-label': T('Reminder unit') },
         h('option', { value: '1', text: T('minutes') }), h('option', { value: '60', text: T('Hours') }), h('option', { value: '1440', text: T('Days') }));
       remindersBox.appendChild(h('div', { class: 'row' },

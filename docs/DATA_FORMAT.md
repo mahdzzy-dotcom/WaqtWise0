@@ -77,3 +77,8 @@ the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is drop
 `data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone], ...] } }`,
 the saved statistics of finished days. It is not part of the export file. Automatic copies of `data.json` are kept
 in the `backups` folder next to it (`data-YYYY-MM-DD.json`, `before-import-*.json`, `before-restore-*.json`).
+
+## Limits
+
+Numbers are checked when a task is saved and when a data file is loaded (a task or a part that fails is skipped with a message, never trusted): task duration 1 to 10080 minutes (7 days); "minutes before or after a prayer or task" and reminder times 0 to 10080; "every N" 1 to 999; "after N occurrences" 1 to 9999; at most 20000 tasks per file; a backup file larger than 20 MB is refused. The limits are in `src/core/limits.js`.
+

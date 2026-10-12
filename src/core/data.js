@@ -14,9 +14,10 @@
 
 const { t } = require('./i18n');
 const { DEFAULT_SETTINGS, sanitizeSettings } = require('./settings');
-const { validateTask } = require('./tasks');
+const { validateTask, validateStart, validateDuration, validateReminders, PRIORITIES } = require('./tasks');
+const { MAX_TASKS } = require('./limits');
 const { normalizeRule } = require('./recurrence');
-const { emptyState } = require('./reminder-engine');
+const { emptyState, normalizeState } = require('./reminder-engine');
 const { isValidKey } = require('./time');
 
 const APP_NAME = 'waqtwise';
@@ -85,6 +86,26 @@ function cleanCompletedAt(raw) {
   return out;
 }
 
+// A single-occurrence edit is kept only for a real date, and only the fields that pass the same checks as a task.
+function cleanOverrides(raw) {
+  const out = {};
+  if (!isPlainObject(raw)) return out;
+  for (const key of Object.keys(raw)) {
+    const value = raw[key];
+    if (!isValidKey(key) || !isPlainObject(value)) continue;
+    const kept = {};
+    if (typeof value.title === 'string' && value.title.trim() !== '') kept.title = value.title.trim();
+    if (typeof value.notes === 'string') kept.notes = value.notes;
+    if (PRIORITIES.includes(value.priority)) kept.priority = value.priority;
+    if (value.categoryId === null || typeof value.categoryId === 'string') kept.categoryId = value.categoryId;
+    if ('start' in value && validateStart(value.start).length === 0) kept.start = value.start;
+    if ('durationMinutes' in value && validateDuration(value.durationMinutes).length === 0) kept.durationMinutes = value.durationMinutes;
+    if (isPlainObject(value.reminders) && validateReminders(value.reminders).length === 0) kept.reminders = value.reminders;
+    if (Object.keys(kept).length > 0) out[key] = kept;
+  }
+  return out;
+}
+
 // Make a task read from a file safe to use: fill missing fields, then validate it.
 function normalizeTask(raw) {
   if (!isPlainObject(raw)) return { error: 'not a task' };
@@ -101,7 +122,7 @@ function normalizeTask(raw) {
     notes: typeof raw.notes === 'string' ? raw.notes : '',
     exceptions: Array.isArray(raw.exceptions) ? raw.exceptions.filter((k) => typeof k === 'string') : [],
     additions: Array.isArray(raw.additions) ? raw.additions.filter((k) => typeof k === 'string') : [],
-    overrides: isPlainObject(raw.overrides) ? raw.overrides : {},
+    overrides: cleanOverrides(raw.overrides),
     completions: isPlainObject(raw.completions) ? raw.completions : {},
     completedAt: cleanCompletedAt(raw.completedAt),
   };
@@ -137,7 +158,12 @@ function normalizeData(raw) {
   const categoryIds = new Set(categories.map((c) => c.id));
   const tasks = [];
   const ids = new Set();
-  for (const rawTask of Array.isArray(source.tasks) ? source.tasks : []) {
+  let rawTasks = Array.isArray(source.tasks) ? source.tasks : [];
+  if (rawTasks.length > MAX_TASKS) {
+    warnings.push(t('Only the first {n} tasks were loaded', { n: MAX_TASKS }));
+    rawTasks = rawTasks.slice(0, MAX_TASKS);
+  }
+  for (const rawTask of rawTasks) {
     const { task, error } = normalizeTask(rawTask);
     const label = isPlainObject(rawTask) && rawTask.title ? `"${rawTask.title}"` : t('A task');
     if (error) {
@@ -153,9 +179,9 @@ function normalizeData(raw) {
     tasks.push(task);
   }
 
-  const reminderState = isPlainObject(source.reminderState)
-    ? { ...emptyState(), ...source.reminderState }
-    : emptyState();
+  const restored = normalizeState(source.reminderState);
+  const reminderState = restored.state;
+  if (restored.dropped > 0) warnings.push(t('Some saved reminder information was damaged and was reset'));
 
   const missedReminders = (Array.isArray(source.missedReminders) ? source.missedReminders : [])
     .filter((m) => isPlainObject(m) && typeof m.taskId === 'string' && typeof m.dateKey === 'string' && Number.isFinite(m.startMs))

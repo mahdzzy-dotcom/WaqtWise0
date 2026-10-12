@@ -41,6 +41,10 @@ Fixed Time, Relative to Prayer, and Relative to Task ("15 minutes after the end 
 A welcome screen asks for the city once. Settings -> Reminders has a "Send a test notification" button that also
 checks that Windows shows notifications; clicking one opens WaqtWise on the Daily View.
 
+## Later
+
+See `docs/TODO.md` (more countries and cities).
+
 ## Assumptions made so far
 
 - Asr uses the standard (Shafi) calculation.

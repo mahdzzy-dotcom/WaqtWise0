@@ -98,6 +98,8 @@ function checkPositions(positions, label, errors) {
 }
 
 // Returns a list of friendly error messages (empty list = valid).
+const { MAX_INTERVAL, MAX_COUNT } = require('./limits');
+
 function validateRule(rule) {
   const errors = [];
   if (!rule || typeof rule !== 'object') return [t('Recurrence is missing')];
@@ -105,7 +107,7 @@ function validateRule(rule) {
 
   if (!isValidKey(r.startDate)) errors.push(t('Start date is not a valid date'));
   if (!FREQUENCIES.includes(r.frequency)) errors.push(t('Repeat must be daily, weekly, monthly or yearly'));
-  if (!Number.isInteger(r.interval) || r.interval < 1) errors.push(t('"Every N" must be a whole number, 1 or more'));
+  if (!Number.isInteger(r.interval) || r.interval < 1 || r.interval > MAX_INTERVAL) errors.push(t('"Every N" must be a whole number from 1 to {max}', { max: MAX_INTERVAL }));
 
   if (r.frequency === 'weekly') {
     if (!Array.isArray(r.weekdays) || r.weekdays.length === 0 || !r.weekdays.every(isWeekday)) {
@@ -155,7 +157,7 @@ function validateRule(rule) {
     if (!isValidKey(end.date)) errors.push(t('End date is not a valid date'));
     else if (isValidKey(r.startDate) && end.date < r.startDate) errors.push(t('End date is before the start date'));
   } else if (end.type === 'count') {
-    if (!Number.isInteger(end.count) || end.count < 1) errors.push(t('Number of occurrences must be 1 or more'));
+    if (!Number.isInteger(end.count) || end.count < 1 || end.count > MAX_COUNT) errors.push(t('Number of occurrences must be from 1 to {max}', { max: MAX_COUNT }));
   }
 
   return errors;

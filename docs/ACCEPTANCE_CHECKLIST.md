@@ -80,4 +80,6 @@ Do these once after installing. They are the parts that cannot be tested without
 
 22. **Arabic**: Settings -> Language / اللغة -> العربية. The whole app turns right to left at once (menu, forms, Statistics, the notification texts). Numbers stay 0123456789. Open a task form, Statistics and a full-screen reminder (Settings -> Preview full screen) and look for any English left over. Switch back to English: everything returns as before.
 
+23. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 22 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
+
 If any of these fails, note which number and what you saw, and send it back.

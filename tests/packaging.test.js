@@ -148,7 +148,7 @@ test('the build workflows exist and do the right things', () => {
   assert.ok(build.includes('dist/*.exe'));
   assert.ok(build.includes('upload-artifact'));
   assert.ok(build.includes('CSC_IDENTITY_AUTO_DISCOVERY'), 'no code signing in v1');
-  assert.match(build, /node-version: 20/);
+  assert.match(build, /node-version: 22/);
 });
 
 test('the guides for the user exist', () => {
@@ -186,4 +186,10 @@ test('sounds: the lists in the window code match the settings, and both pages lo
   for (const page of ['index.html', 'alert.html']) {
     assert.ok(fs.readFileSync(path.join(root, 'src/renderer', page), 'utf8').includes('<script src="sounds.js"></script>'), `${page} loads sounds.js`);
   }
+});
+
+test('Electron is a version that still gets security updates (42 or newer; 37 to 41 are past their end of life)', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  const major = Number(/(\d+)/.exec(pkg.devDependencies.electron)[1]);
+  assert.ok(major >= 42, `Electron ${major} is no longer supported`);
 });

@@ -107,9 +107,15 @@ function makeFakeElectron({ userData, lock = true, saveTo, openFrom, packaged = 
   fake.nativeTheme = { shouldUseDarkColors: false, on: () => {} };
   fake.powerMonitor = { on: (event, fn) => { fake.powerEvents[event] = fn; } };
 
+  // A call from the app's own window: the tests leave the event out (or pass {}) and get this one.
+  fake.mainEvent = () => {
+    const win = fake.windows.filter((w) => !w.destroyed && /index\.html$/.test(String(w.file))).pop();
+    return { sender: win && win.webContents, senderFrame: { url: 'file:///app/src/renderer/index.html' } };
+  };
+  const asMainWindow = (fn) => (event, ...rest) => fn(event && event.sender ? event : fake.mainEvent(), ...rest);
   fake.ipcMain = {
-    handle: (channel, fn) => { fake.ipc[channel] = fn; },
-    on: (channel, fn) => { fake.ipcOn[channel] = fn; },
+    handle: (channel, fn) => { fake.ipc[channel] = asMainWindow(fn); },
+    on: (channel, fn) => { fake.ipcOn[channel] = asMainWindow(fn); },
   };
 
   fake.dialog = {
@@ -182,7 +188,7 @@ async function launch(options = {}) {
   fake.win = () => fake.windows.find((w) => w.options.title === 'WaqtWise');
   fake.alertWindows = () => fake.windows.filter((w) => w.options.title === 'WaqtWise reminder' && !w.destroyed);
   fake.fire = (h, m, sec = 0) => tickEngineAt(fake, h, m, sec);
-  fake.svc = (method, ...args) => fake.ipc.svc({}, method, args);
+  fake.svc = (method, ...args) => fake.ipc.svc(undefined, method, args);
   fake.dataFile = () => JSON.parse(fs.readFileSync(path.join(userData, 'data.json'), 'utf8'));
   fake.settleDialogs = () => new Promise((resolve) => setImmediate(resolve));
   fake.cleanup = () => {
@@ -498,7 +504,26 @@ test('The window can call planner actions, but only the allowed ones', async () 
 
   await assert.rejects(() => app.svc('importData', {}), /Unknown request/);
   await assert.rejects(() => app.svc('persist'), /Unknown request/);
-  await assert.rejects(() => app.ipc.svc({}, 'constructor', []), /Unknown request/);
+  await assert.rejects(() => app.ipc.svc(undefined, 'constructor', []), /Unknown request/);
+  app.cleanup();
+});
+
+test('Requests from anything other than the app window are refused', async () => {
+  const app = await launch();
+  const other = { sender: { id: 'some other page' }, senderFrame: { url: 'file:///app/src/renderer/index.html' } };
+  const wrongPage = { sender: app.win().webContents, senderFrame: { url: 'https://example.com/index.html' } };
+  const noFrame = { sender: app.win().webContents };
+  for (const event of [other, wrongPage, noFrame]) {
+    await assert.rejects(() => app.ipc.svc(event, 'bootstrap', []), /Unknown request/);
+    await assert.rejects(() => app.ipc['export-data'](event), /Unknown request/);
+    await assert.rejects(() => app.ipc['import-data'](event), /Unknown request/);
+    await assert.rejects(() => app.ipc['test-notification'](event), /Unknown request/);
+    await assert.rejects(() => app.ipc['preview-alert'](event), /Unknown request/);
+  }
+  assert.equal(app.notifications.length, 0, 'no test notification was shown');
+  // "renderer-ready" from outside does nothing; from the window it does
+  app.ipcOn['renderer-ready'](other);
+  assert.ok(await app.svc('bootstrap'), 'the real window still works');
   app.cleanup();
 });
 
@@ -542,6 +567,13 @@ test('Export writes a backup file; import restores it; cancelling does nothing',
   const d = await launch({ openFrom: backupFile });
   await assert.rejects(() => d.ipc['import-data'](), /not a WaqtWise backup/);
   d.cleanup();
+
+  // a file far bigger than any backup is refused before it is read
+  fs.writeFileSync(backupFile, '');
+  fs.truncateSync(backupFile, 21 * 1024 * 1024);
+  const e = await launch({ openFrom: backupFile });
+  await assert.rejects(() => e.ipc['import-data'](), /too big/);
+  e.cleanup();
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

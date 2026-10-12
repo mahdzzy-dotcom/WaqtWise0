@@ -42,6 +42,42 @@ function emptyState() {
   return { delivered: {}, lastTickAt: null, snoozed: [] };
 }
 
+// Makes the saved state of the engine safe to use, whatever a data file contains.
+// Returns { state, dropped }: dropped counts the pieces that had to be thrown away.
+function normalizeState(raw) {
+  const state = emptyState();
+  let dropped = 0;
+  const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  if (raw === undefined || raw === null) return { state, dropped };
+  if (!isObject(raw)) return { state, dropped: 1 };
+
+  if (isObject(raw.delivered)) {
+    for (const [key, value] of Object.entries(raw.delivered)) {
+      if (Number.isFinite(value)) state.delivered[key] = value;
+      else dropped += 1;
+    }
+  } else if (raw.delivered !== undefined) {
+    dropped += 1;
+  }
+
+  if (Array.isArray(raw.snoozed)) {
+    for (const s of raw.snoozed) {
+      if (isObject(s) && typeof s.taskId === 'string' && typeof s.dateKey === 'string' && Number.isFinite(s.until)) {
+        state.snoozed.push({ taskId: s.taskId, dateKey: s.dateKey, until: s.until, ...(s.fullScreen === true ? { fullScreen: true } : {}) });
+      } else {
+        dropped += 1;
+      }
+    }
+  } else if (raw.snoozed !== undefined) {
+    dropped += 1;
+  }
+
+  if (Number.isFinite(raw.lastTickAt)) state.lastTickAt = raw.lastTickAt;
+  else if (raw.lastTickAt !== undefined && raw.lastTickAt !== null) dropped += 1;
+
+  return { state, dropped };
+}
+
 class ReminderEngine {
   // deps:
   //   getTasks()      -> array of tasks
@@ -58,9 +94,7 @@ class ReminderEngine {
   constructor(deps) {
     this.deps = deps;
     this.options = { ...DEFAULTS, ...(deps.options || {}) };
-    this.state = { ...emptyState(), ...(deps.initialState || {}) };
-    this.state.delivered = { ...this.state.delivered };
-    this.state.snoozed = [...(this.state.snoozed || [])];
+    this.state = normalizeState(deps.initialState).state;
     this.timer = null;
     this.alertTimer = null;
     this.lastSavedAt = 0;
@@ -384,4 +418,4 @@ class ReminderEngine {
   }
 }
 
-module.exports = { ReminderEngine, emptyState, DEFAULTS };
+module.exports = { ReminderEngine, emptyState, normalizeState, DEFAULTS };

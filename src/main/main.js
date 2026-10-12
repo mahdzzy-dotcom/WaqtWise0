@@ -26,6 +26,7 @@ const { formatTime12 } = require('../core/time');
 const { createElectronNotifier, findActionUrlInArgv, APP_ID, PROTOCOL } = require('./toast');
 const { createTray } = require('./tray');
 const { createAlertManager, isValidAction } = require('./alert-window');
+const { MAX_IMPORT_BYTES } = require('../core/limits');
 
 const ICON = path.join(__dirname, 'icon.ico'); // window / taskbar icon (the .ico holds the small bold version Windows needs at 16-32 px)
 // Tray icon: tray-icon.png is 16x16; Electron also picks up tray-icon@1.5x / @2x / @3x for sharper icons on scaled screens.
@@ -340,13 +341,28 @@ function applyStartWithWindows(settings) {
 
 // ---- Window <-> service connection -----------------------------------------------------------------------------------------------
 
+// Only the app's own window may use the service, the file dialogs and the other requests below.
+// (The full-screen reminder windows have their own two messages, checked by the alert manager.)
+function fromMainWindow(event) {
+  if (!event || !mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) return false;
+  const url = event.senderFrame && event.senderFrame.url;
+  if (typeof url !== 'string' || !url.startsWith('file://')) return false;
+  return /\/renderer\/index\.html(?:[?#].*)?$/.test(url);
+}
+
+function refuseOutsiders(event) {
+  if (!fromMainWindow(event)) throw new Error(t('Unknown request.'));
+}
+
 function registerIpc() {
   ipcMain.handle('svc', async (event, method, args) => {
+    refuseOutsiders(event);
     if (!PUBLIC_METHODS.includes(method)) throw new Error(t('Unknown request.'));
     return service[method](...(Array.isArray(args) ? args : []));
   });
 
-  ipcMain.handle('export-data', async () => {
+  ipcMain.handle('export-data', async (event) => {
+    refuseOutsiders(event);
     const stamp = new Date().toISOString().slice(0, 10);
     const result = await dialog.showSaveDialog(mainWindow, {
       title: t('Export data'),
@@ -358,18 +374,22 @@ function registerIpc() {
     return { ok: true, path: result.filePath };
   });
 
-  ipcMain.handle('import-data', async () => {
+  ipcMain.handle('import-data', async (event) => {
+    refuseOutsiders(event);
     const result = await dialog.showOpenDialog(mainWindow, {
       title: t('Import data'),
       properties: ['openFile'],
       filters: [{ name: t('WaqtWise backup'), extensions: ['json'] }],
     });
     if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+    // A backup is a small file; refuse a huge one before reading it into memory.
+    if (fs.statSync(result.filePaths[0]).size > MAX_IMPORT_BYTES) throw new Error(t('This file is too big to be a WaqtWise backup.'));
     const text = fs.readFileSync(result.filePaths[0], 'utf8');
     return service.importData(text);
   });
 
-  ipcMain.handle('test-notification', async () => {
+  ipcMain.handle('test-notification', async (event) => {
+    refuseOutsiders(event);
     const settings = service.getSettings();
     notify({
       kind: 'task',
@@ -384,7 +404,8 @@ function registerIpc() {
     return { ok: true };
   });
 
-  ipcMain.handle('preview-alert', async () => {
+  ipcMain.handle('preview-alert', async (event) => {
+    refuseOutsiders(event);
     alertManager.show([service.getAlertSample()]);
     return { ok: true };
   });
@@ -396,7 +417,8 @@ function registerIpc() {
     if (message && typeof message === 'object') handleAlertAction(event.sender, message);
   });
 
-  ipcMain.on('renderer-ready', () => {
+  ipcMain.on('renderer-ready', (event) => {
+    if (!fromMainWindow(event)) return;
     rendererReady = true;
     flushPendingEvents();
   });
