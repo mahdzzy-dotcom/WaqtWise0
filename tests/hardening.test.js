@@ -120,3 +120,34 @@ test('"start after another task" has the same upper limit on its minutes, in the
   assert.equal(warnings.length, 1);
   assert.deepEqual(data.tasks[1].overrides['2026-10-04'], { title: 'ok' });
 });
+
+test('reminders: "enabled" must be on or off (a text like "false" is not "on"), and the offsets are tidied', () => {
+  assert.notDeepEqual(validateTask({ ...createTask(base()), reminders: { enabled: 'false', offsets: [10] } }), []);
+  assert.notDeepEqual(validateTask({ ...createTask(base()), reminders: { enabled: 1, offsets: [10] } }), []);
+  assert.throws(() => createTask(base({ reminders: { enabled: 'yes', offsets: [] } })));
+  // in a data file: the text is read as "off", the offsets are sorted and made unique
+  const raw = { ...createTask(base()), reminders: { enabled: 'false', offsets: [30, 10, 10, 60] } };
+  const { data } = normalizeData({ ...emptyData(), tasks: [raw] });
+  assert.deepEqual(data.tasks[0].reminders, { enabled: false, offsets: [10, 30, 60] });
+  const on = { ...createTask(base()), reminders: { enabled: true, offsets: [60, 10, 60], fullScreen: true } };
+  assert.deepEqual(normalizeData({ ...emptyData(), tasks: [on] }).data.tasks[0].reminders, { enabled: true, offsets: [10, 60], fullScreen: true });
+  // a bad override value for reminders is dropped
+  const ov = { ...createTask(base()), overrides: { '2026-10-04': { reminders: { enabled: 'x', offsets: [1] }, title: 'kept' } } };
+  assert.deepEqual(normalizeData({ ...emptyData(), tasks: [ov] }).data.tasks[0].overrides['2026-10-04'], { title: 'kept' });
+});
+
+test('exceptions, additions, completions and completion times keep only real dates and valid values', () => {
+  const raw = {
+    ...createTask(base()),
+    exceptions: ['2026-10-05', 'x', '2026-13-45', 7],
+    additions: ['2026-10-06', '', null],
+    completions: { '2026-10-04': true, 'nope': true, '2026-10-05': 'yes', '2026-10-06': false },
+    completedAt: { '2026-10-04': '2026-10-04T08:41:00.000Z', '2026-10-05': 'Oct 5 2026', '2026-10-06': '+275760-09-13T00:00:00.000Z', bad: '2026-10-04T08:41:00.000Z' },
+  };
+  const { data } = normalizeData({ ...emptyData(), tasks: [raw] });
+  const t = data.tasks[0];
+  assert.deepEqual(t.exceptions, ['2026-10-05']);
+  assert.deepEqual(t.additions, ['2026-10-06']);
+  assert.deepEqual(t.completions, { '2026-10-04': true });
+  assert.deepEqual(t.completedAt, { '2026-10-04': '2026-10-04T08:41:00.000Z' });
+});

@@ -89,6 +89,9 @@ function validateReminders(reminders) {
   if (!Array.isArray(offsets) || !offsets.every((o) => Number.isInteger(o) && o >= 0 && o <= MAX_OFFSET_MINUTES)) {
     return [t('Reminder times must be whole minutes from 0 to {max}', { max: MAX_OFFSET_MINUTES })];
   }
+  if ('enabled' in reminders && typeof reminders.enabled !== 'boolean') {
+    return [t('Reminders must be on or off')];
+  }
   if ('fullScreen' in reminders && typeof reminders.fullScreen !== 'boolean') {
     return [t('The full-screen alert must be on or off')];
   }

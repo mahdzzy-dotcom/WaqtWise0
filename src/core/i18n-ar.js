@@ -449,6 +449,7 @@
   "Reminder: {title}": "تذكير: {title}",
   "Reminders & Notifications": "التذكيرات والإشعارات",
   "Reminders and notifications will stop until you start WaqtWise again.": "ستتوقف التذكيرات والإشعارات حتى تشغّل WaqtWise مرة أخرى.",
+  "Reminders must be on or off": "التذكيرات لازم تكون مفعّلة أو متوقفة",
   "Remove": "إزالة",
   "Remove {name}": "إزالة {name}",
   "Remove {what}": "إزالة {what}",

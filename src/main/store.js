@@ -11,6 +11,14 @@ const fs = require('fs');
 const path = require('path');
 const { emptyData, normalizeData } = require('../core/data');
 
+const BUSY_CODES = ['EPERM', 'EBUSY', 'EACCES'];
+const REPLACE_TRIES = 6;
+const REPLACE_WAIT_MS = 25;
+
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 class FileStore {
   constructor(filePath, options) {
     this.filePath = filePath;
@@ -19,6 +27,24 @@ class FileStore {
     this.loadNotes = []; // things the app may want to tell the user after loading
     this.backupDir = path.join(path.dirname(filePath), 'backups');
     this.now = (options && options.now) || (() => new Date());
+    this.sleep = (options && options.sleep) || sleepMs;
+  }
+
+  // Windows may refuse for a moment to replace a file that a virus scanner, the search indexer or a sync tool has open
+  // (EPERM, EBUSY, EACCES). Try again a few times; if it still does not work, copy the new data over the old file.
+  replaceDataFile() {
+    for (let attempt = 0; attempt < REPLACE_TRIES; attempt++) {
+      try {
+        fs.renameSync(this.tempPath, this.filePath);
+        return;
+      } catch (error) {
+        if (!BUSY_CODES.includes(error.code)) throw error;
+        if (attempt < REPLACE_TRIES - 1) this.sleep(REPLACE_WAIT_MS * (attempt + 1));
+      }
+    }
+    // Still busy. The copy keeps the same file, and the ".bak" made just before holds the previous version.
+    fs.copyFileSync(this.tempPath, this.filePath);
+    try { fs.unlinkSync(this.tempPath); } catch (error) { /* a leftover temporary file does no harm */ }
   }
 
   readJson(file) {
@@ -73,7 +99,7 @@ class FileStore {
         // a missing backup should never block saving
       }
     }
-    fs.renameSync(this.tempPath, this.filePath);
+    this.replaceDataFile();
     this.dailyBackup();
   }
 

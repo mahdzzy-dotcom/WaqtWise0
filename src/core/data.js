@@ -76,13 +76,35 @@ function normalizeCategories(raw, warnings) {
   return result;
 }
 
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
 // Times when occurrences were ticked: keep only date key -> valid date text.
 function cleanCompletedAt(raw) {
   const out = {};
   if (!isPlainObject(raw)) return out;
   for (const key of Object.keys(raw)) {
-    if (typeof raw[key] === 'string' && !Number.isNaN(Date.parse(raw[key]))) out[key] = raw[key];
+    if (!isValidKey(key) || typeof raw[key] !== 'string' || !ISO_TIME.test(raw[key])) continue;
+    const time = Date.parse(raw[key]);
+    const year = new Date(time).getUTCFullYear();
+    if (Number.isNaN(time) || year < 2000 || year > 2200) continue;
+    out[key] = new Date(time).toISOString(); // one canonical form
   }
+  return out;
+}
+
+// Which occurrences are done: only real dates, only "true".
+function cleanCompletions(raw) {
+  const out = {};
+  if (!isPlainObject(raw)) return out;
+  for (const key of Object.keys(raw)) if (isValidKey(key) && raw[key] === true) out[key] = true;
+  return out;
+}
+
+// Reminders of a task: "on" only when it says true; offsets without repeats, smallest first.
+function cleanReminders(raw) {
+  if (!isPlainObject(raw)) return { enabled: false, offsets: [] };
+  const out = { enabled: raw.enabled === true, offsets: Array.isArray(raw.offsets) ? Array.from(new Set(raw.offsets)).sort((a, b) => a - b) : raw.offsets };
+  if ('fullScreen' in raw) out.fullScreen = raw.fullScreen;
   return out;
 }
 
@@ -100,7 +122,7 @@ function cleanOverrides(raw) {
     if (value.categoryId === null || typeof value.categoryId === 'string') kept.categoryId = value.categoryId;
     if ('start' in value && validateStart(value.start).length === 0) kept.start = value.start;
     if ('durationMinutes' in value && validateDuration(value.durationMinutes).length === 0) kept.durationMinutes = value.durationMinutes;
-    if (isPlainObject(value.reminders) && validateReminders(value.reminders).length === 0) kept.reminders = value.reminders;
+    if (isPlainObject(value.reminders) && validateReminders(value.reminders).length === 0) kept.reminders = cleanReminders(value.reminders);
     if (Object.keys(kept).length > 0) out[key] = kept;
   }
   return out;
@@ -116,14 +138,14 @@ function normalizeTask(raw) {
     durationMinutes: raw.durationMinutes,
     date: raw.recurrence ? null : raw.date,
     recurrence: isPlainObject(raw.recurrence) ? normalizeRule(raw.recurrence) : null,
-    reminders: isPlainObject(raw.reminders) ? raw.reminders : { enabled: false, offsets: [] },
+    reminders: cleanReminders(raw.reminders),
     priority: raw.priority || 'Medium',
     categoryId: raw.categoryId === undefined ? null : raw.categoryId,
     notes: typeof raw.notes === 'string' ? raw.notes : '',
-    exceptions: Array.isArray(raw.exceptions) ? raw.exceptions.filter((k) => typeof k === 'string') : [],
-    additions: Array.isArray(raw.additions) ? raw.additions.filter((k) => typeof k === 'string') : [],
+    exceptions: Array.isArray(raw.exceptions) ? raw.exceptions.filter(isValidKey) : [],
+    additions: Array.isArray(raw.additions) ? raw.additions.filter(isValidKey) : [],
     overrides: cleanOverrides(raw.overrides),
-    completions: isPlainObject(raw.completions) ? raw.completions : {},
+    completions: cleanCompletions(raw.completions),
     completedAt: cleanCompletedAt(raw.completedAt),
   };
   if (typeof raw.continuedFrom === 'string' && raw.continuedFrom !== '') task.continuedFrom = raw.continuedFrom;
