@@ -79,6 +79,7 @@ const APPEARANCE_SCHEMA = {
   name: { size: intBetween(24, 160), color: isColor, bold: isBool, italic: isBool, uppercase: isBool },
   notes: { show: isBool, size: intBetween(14, 96), color: isColor, bold: isBool, italic: isBool },
   show: { time: isBool, duration: isBool, zone: isBool, category: isBool, priority: isBool },
+  buttons: { snooze: isBool, open: isBool, done: isBool }, // "Got it" is always there, so the alert can always be closed
 };
 
 const DEFAULT_ALERT_APPEARANCE = {
@@ -90,6 +91,7 @@ const DEFAULT_ALERT_APPEARANCE = {
   name: { size: 80, color: '#ffffff', bold: true, italic: false, uppercase: false },
   notes: { show: true, size: 34, color: '#cbd5e1', bold: false, italic: false },
   show: { time: true, duration: true, zone: true, category: true, priority: true },
+  buttons: { snooze: true, open: true, done: true },
 };
 
 // Ready-made looks (each one is a complete appearance).

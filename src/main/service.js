@@ -30,6 +30,7 @@ class PlannerService {
     this.store = deps.store;
     this.now = deps.now || (() => new Date());
     this.newId = deps.newId || (() => crypto.randomUUID());
+    this.random = deps.random || Math.random;
     this.providerFactory = deps.providerFactory || defaultProviderFactory;
     this.onDataChanged = deps.onDataChanged || (() => {});
     this.onSettingsChanged = deps.onSettingsChanged || (() => {});
@@ -156,6 +157,7 @@ const MIXINS = [
   require('./planner/settings-categories').SettingsMethods,
   require('./planner/data-transfer').DataTransferMethods,
   require('./planner/history').HistoryMethods,
+  require('./planner/free-tasks').FreeTaskMethods,
 ];
 for (const mixin of MIXINS) {
   for (const name of Object.getOwnPropertyNames(mixin.prototype)) {
@@ -168,6 +170,7 @@ const PUBLIC_METHODS = [
   'bootstrap', 'getDay', 'getStats', 'getUpcoming', 'getMissed', 'dismissMissed', 'clearMissed', 'newTaskDefaults', 'getTaskForEdit', 'previewForm', 'saveTask',
   'getReferenceChoices', 'getDeleteImpact', 'getAlertPreset', 'deleteTask', 'setDone', 'duplicateTask', 'getSettings', 'saveSettings', 'addCategory', 'updateCategory',
   'deleteCategory', 'listBackups', 'restoreBackup', 'getCityInfo',
+  'getFreeTasks', 'getFreeTaskCount', 'saveFreeTask', 'deleteFreeTask', 'setFreeDone', 'clearFreeDone', 'moveFreeTask', 'getFreeTaskForSchedule', 'unscheduleTask', 'getTaskDetails',
 ];
 
 module.exports = { PlannerService, PUBLIC_METHODS, defaultProviderFactory };

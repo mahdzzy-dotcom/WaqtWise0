@@ -3,19 +3,22 @@
 // The saved data and the export/import file format.
 //
 // Saved data (data.json in the user's profile folder):
-//   { version, settings, categories, tasks, reminderState, missedReminders }
+//   { version, settings, categories, tasks, freeTasks, noteRotation, reminderState, missedReminders }
+// (noteRotation: which of a task's several notes was shown last; it is NOT part of the export file.)
 // (missedReminders: reminders that came due while the computer was off or asleep and were not handled yet;
 //  they are shown on the bell and are NOT part of the export file.)
 //
 // Export file (documented in docs/DATA_FORMAT.md):
-//   { app: 'waqtwise', formatVersion: 1, exportedAt, settings, categories, tasks }
+//   { app: 'waqtwise', formatVersion: 1, exportedAt, settings, categories, tasks, freeTasks }
 //
 // Derived values (zones, end times, durations, occurrences, prayer times) are never saved.
 
 const { t } = require('./i18n');
 const { DEFAULT_SETTINGS, sanitizeSettings } = require('./settings');
 const { validateTask, validateStart, validateDuration, validateReminders, PRIORITIES } = require('./tasks');
-const { MAX_TASKS } = require('./limits');
+const { MAX_TASKS, MAX_FREE_TASKS } = require('./limits');
+const { normalizeFreeTask } = require('./free-tasks');
+const { normalizeNoteRotation } = require('./random-notes');
 const { normalizeRule } = require('./recurrence');
 const { emptyState, normalizeState } = require('./reminder-engine');
 const { isValidKey } = require('./time');
@@ -46,6 +49,8 @@ function emptyData() {
     settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
     categories: defaultCategories(),
     tasks: [],
+    freeTasks: [],
+    noteRotation: {},
     reminderState: emptyState(),
     missedReminders: [],
     statsHistory: { through: null, days: {} },
@@ -105,6 +110,7 @@ function cleanReminders(raw) {
   if (!isPlainObject(raw)) return { enabled: false, offsets: [] };
   const out = { enabled: raw.enabled === true, offsets: Array.isArray(raw.offsets) ? Array.from(new Set(raw.offsets)).sort((a, b) => a - b) : raw.offsets };
   if ('fullScreen' in raw) out.fullScreen = raw.fullScreen;
+  if ('randomNotes' in raw) out.randomNotes = raw.randomNotes;
   return out;
 }
 
@@ -201,6 +207,29 @@ function normalizeData(raw) {
     tasks.push(task);
   }
 
+  const freeTasks = [];
+  const freeIds = new Set();
+  let rawFree = Array.isArray(source.freeTasks) ? source.freeTasks : [];
+  if (rawFree.length > MAX_FREE_TASKS) {
+    warnings.push(t('Only the first {n} free tasks were loaded', { n: MAX_FREE_TASKS }));
+    rawFree = rawFree.slice(0, MAX_FREE_TASKS);
+  }
+  for (const rawItem of rawFree) {
+    const { task, error } = normalizeFreeTask(rawItem);
+    const label = isPlainObject(rawItem) && rawItem.title ? `"${rawItem.title}"` : t('A free task');
+    if (error) {
+      warnings.push(t('{label} was skipped: {error}', { label, error }));
+      continue;
+    }
+    if (freeIds.has(task.id) || ids.has(task.id)) {
+      warnings.push(t('{label} was skipped because its id is used twice', { label }));
+      continue;
+    }
+    freeIds.add(task.id);
+    if (task.categoryId !== null && !categoryIds.has(task.categoryId)) task.categoryId = null;
+    freeTasks.push(task);
+  }
+
   const restored = normalizeState(source.reminderState);
   const reminderState = restored.state;
   if (restored.dropped > 0) warnings.push(t('Some saved reminder information was damaged and was reset'));
@@ -218,7 +247,7 @@ function normalizeData(raw) {
     .slice(-50);
 
   return {
-    data: { version: DATA_VERSION, settings, categories, tasks, reminderState, missedReminders, statsHistory: normalizeStatsHistory(source.statsHistory) },
+    data: { version: DATA_VERSION, settings, categories, tasks, freeTasks, noteRotation: normalizeNoteRotation(source.noteRotation, new Set(tasks.map((x) => x.id))), reminderState, missedReminders, statsHistory: normalizeStatsHistory(source.statsHistory) },
     warnings,
   };
 }
@@ -231,6 +260,7 @@ function buildExport(data, now = new Date()) {
     settings: data.settings,
     categories: data.categories,
     tasks: data.tasks,
+    freeTasks: data.freeTasks || [],
   };
 }
 

@@ -26,6 +26,18 @@ Full specification: WaqtWise_Spec.md (kept outside this folder).
 
 English and Arabic (Settings -> Language). Arabic is a full right-to-left screen; numbers are always 0123456789. The texts live in `src/core/i18n-ar.js` (the English text is the key). `node tools/i18n-scan.js` lists every text, and `tests/i18n.test.js` fails if a text has no Arabic or an Arabic text is no longer used.
 
+## Free To-Do list and task details
+
+The side menu has a **Free To-Do list** for tasks that have no time yet (own screen, quick add with Enter, a **Schedule task** button that opens the normal task window). Clicking a task anywhere (Daily View, bell, missed reminders, Statistics, a notification) shows its details; **Edit task** opens the edit window. Free tasks are saved in `data.json` and travel with export, import and backups (see `docs/DATA_FORMAT.md`).
+
+## Alert buttons and details
+
+Settings -> Full-screen reminder lets you choose which details and which buttons (Snooze, Open task, Mark as Done) the alert shows; "Got it" always stays.
+
+## One note at random
+
+In the task form (full-screen alert on) tick **Show one note at random** and separate the notes with `;`. The full-screen alert shows one of them, every note once before any repeats. See `docs/DATA_FORMAT.md`.
+
 ## Start time options
 
 Fixed Time, Relative to Prayer, and Relative to Task ("15 minutes after the end of <task>").

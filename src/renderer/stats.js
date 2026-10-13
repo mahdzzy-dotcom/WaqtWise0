@@ -247,8 +247,8 @@
     const shown = local.showAllLate ? late.items : late.items.slice(0, LATE_SHOWN);
     const list = h('div', { class: 'late-list' }, shown.map((t) =>
       h('div', { class: 'late-item', role: 'button', tabindex: '0', 'data-task': t.taskId,
-        onclick: () => WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }),
-        onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }); } },
+        onclick: () => WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }),
+        onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }); } },
       h('div', { class: 'late-main' }, h('div', { class: 'late-title', text: t.title }), h('div', { class: 'late-when', text: `${t.whenLabel} · ${t.zoneName}` })),
       h('span', { class: 'late-age', text: t.ageLabel }))));
     const more = late.total > LATE_SHOWN

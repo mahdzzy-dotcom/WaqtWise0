@@ -11,6 +11,8 @@ module.exports = {
   ...require('./reminder-engine'),
   ...require('./cities'),
   ...require('./settings'),
+  ...require('./free-tasks'),
+  ...require('./random-notes'),
   ...require('./data'),
   ...require('./prayer-adapter'),
 };

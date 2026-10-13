@@ -33,6 +33,12 @@ Tasks can repeat (every day, certain weekdays, every month on the 1st Friday, an
 a repeating task, the app asks whether the change applies to this occurrence only, this and the following ones,
 or all of them.
 
+### Tasks with no time yet (Free To-Do list)
+
+Open the menu and choose **Free To-Do list**. Type a task and press Enter (or use "Add with details"). When you decide the time, press **Schedule task**: the usual window opens with the title and notes filled in; choose the time and repeat, and Save. The task moves into the five zones. To put a one-time task back, click it in the Daily View and choose **Move to free list**.
+
+Clicking a task (in the Daily View, the bell, the missed reminders or Statistics) shows its details. Use **Edit task** to change it.
+
 ## 4. Reminders
 
 - New tasks have a reminder switched on. With no times added, it reminds you **10 minutes before** (change this
@@ -41,6 +47,14 @@ or all of them.
   notification itself to open WaqtWise on the Daily View.
 - Try it: Settings -> Reminders & Notifications -> **Send a test notification**.
 - If you were away (computer off or asleep), the app tells you which reminders you missed.
+
+### Choosing the buttons and details of the full-screen alert
+
+Settings -> Full-screen reminder: **Details shown** chooses the time, duration, zone, category and priority lines, and **Show the notes** the notes. **Buttons shown** chooses whether Snooze, Open task and Mark as Done appear. "Got it" is always shown. The preview below updates at once.
+
+### One note at random in the full-screen alert
+
+In the task window, with **Full-screen alert** on, tick **Show one note at random** and write several notes separated by `;` (for example `Drink water; Stretch; Breathe`). Each time the alert appears it shows one of them; all of them are used before any repeats, and when you snooze, the alert comes back with a different one.
 
 ### Full-screen alerts (hard to miss)
 

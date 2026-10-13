@@ -114,8 +114,8 @@
     return h('div', {
       class: `task ${t.done ? 'done' : ''} ${t.overdue ? 'overdue' : ''} ${t.inProgress ? 'live' : ''}`, role: 'button', tabindex: '0',
       'aria-label': `${t.title}, ${t.startLabel}`,
-      onclick: () => WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }),
-      onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }); },
+      onclick: () => WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }),
+      onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }); },
     },
       check,
       h('div', { class: 'task-time' }, t.startLabel, t.afterMidnight ? h('small', { text: T('next day') }) : null),
@@ -145,7 +145,7 @@
     z.continued.forEach((c) =>
       body.appendChild(h('div', {
         class: 'continues', text: T('↳ Continues from “{title}” ({minutes} here, until {end})', { title: c.title, minutes: c.minutesLabel, end: c.endLabel }),
-        onclick: () => WW.openTaskForm({ mode: 'edit', taskId: c.taskId, dateKey: c.dateKey }),
+        onclick: () => WW.openTaskDetails({ taskId: c.taskId, dateKey: c.dateKey }),
       })));
     if (z.tasks.length === 0 && z.continued.length === 0) {
       body.appendChild(h('div', { class: 'empty-zone', text: T('No tasks in this zone yet.') }));
@@ -286,6 +286,7 @@
     refreshBell();
     if (WW.state.view === 'daily') await WW.showDay(WW.state.dayKey);
     else if (WW.state.view === 'stats') await WW.showStats();
+    else if (WW.state.view === 'free') await WW.showFree();
   };
 
   // ---- Bell and menu ----------------------------------------------------------------------------------------------
@@ -344,7 +345,7 @@
           closePopovers();
           try { await WW.call('dismissMissed', { taskId: r.taskId, dateKey: r.dateKey }); } catch (error) { /* the task may be gone */ }
           refreshBell();
-          WW.openTaskForm({ mode: 'edit', taskId: r.taskId, dateKey: r.dateKey });
+          WW.openTaskDetails({ taskId: r.taskId, dateKey: r.dateKey });
         },
       },
         h('div', { class: 'when', text: r.title }),
@@ -358,8 +359,9 @@
     document.getElementById('menu-btn').setAttribute('aria-expanded', 'false');
   }
 
-  function openDrawer() {
+  async function openDrawer() {
     closePopovers();
+    if (WW.refreshFreeCount) await WW.refreshFreeCount();
     const drawer = document.getElementById('drawer');
     const item = (icon, label, fn, active) => h('button', {
       class: `drawer-item ${active ? 'active' : ''}`, type: 'button',
@@ -371,6 +373,7 @@
         h('div', { class: 'drawer-title', text: 'WaqtWise' }),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': T('Close menu'), onclick: closeDrawer }, WW.icon('close', 18, 2))),
       item('calendar', T('Daily View'), () => WW.showDaily(), WW.state.view === 'daily'),
+      item('check', T('Free To-Do list') + (WW.state.freeCount ? ` (${WW.state.freeCount})` : ''), () => WW.showFree(), WW.state.view === 'free'),
       item('chart', T('Statistics'), () => WW.showStats({ range: 'week' }), WW.state.view === 'stats'),
       item('gear', T('Settings'), () => WW.showSettings(), WW.state.view === 'settings'),
       h('div', { class: 'drawer-sep' }),
@@ -479,6 +482,7 @@
     if (WW.refreshBell) WW.refreshBell();
     if (WW.state.view === 'settings') WW.renderSettings();
     else if (WW.state.view === 'stats') await WW.showStats();
+    else if (WW.state.view === 'free') await WW.showFree();
     else await WW.showDay(WW.state.todayKey);
   }
 
@@ -495,7 +499,7 @@
           dlg.close();
           try { await WW.call('dismissMissed', { taskId: i.taskId, dateKey: i.dateKey }); } catch (error) { /* ignore */ }
           refreshBell();
-          WW.openTaskForm({ mode: 'edit', taskId: i.taskId, dateKey: i.dateKey });
+          WW.openTaskDetails({ taskId: i.taskId, dateKey: i.dateKey });
         },
       },
         h('div', { class: 'when', text: i.title }),
@@ -628,7 +632,7 @@
         if (!anyDialogOpen() && WW.state.settings && WW.state.settings.welcomeShown) WW.showDay(WW.state.todayKey || WW.state.dayKey);
       });
       window.api.on('open-task', ({ taskId, dateKey }) => {
-        if (taskId && dateKey) WW.openTaskForm({ mode: 'edit', taskId, dateKey });
+        if (taskId && dateKey) WW.openTaskDetails({ taskId, dateKey });
         else WW.showDay(WW.state.todayKey);
       });
     }

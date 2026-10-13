@@ -9,5 +9,8 @@ module.exports = {
   MAX_INTERVAL: 999, // "every N days / weeks / months / years"
   MAX_COUNT: 9999, // "ends after N occurrences"
   MAX_TASKS: 20000, // tasks in one data file
+  MAX_FREE_TASKS: 5000, // tasks in the free to-do list
+  MAX_TITLE_LENGTH: 200, // a free task's title
+  MAX_NOTES_LENGTH: 20000, // a free task's notes
   MAX_IMPORT_BYTES: 20 * 1024 * 1024, // size of a backup file that is read
 };

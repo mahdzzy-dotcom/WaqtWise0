@@ -17,6 +17,14 @@ const fontsMissing = !fs.existsSync(require('path').join(__dirname, '..', 'src',
 const realErrors = (list) => list.filter((e) => !(fontsMissing && /ERR_FILE_NOT_FOUND/.test(e)));
 
 let passed = 0;
+// Clicking a task shows its details; "Edit task" leads on to the edit form.
+async function openEdit(page, row) {
+  await row.click();
+  await page.waitForSelector('#details-edit');
+  await page.click('#details-edit');
+  await page.waitForSelector('#f-title');
+}
+
 async function step(name, fn) {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return; // ONLY=text runs just the matching steps
   try {
@@ -311,7 +319,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.match(await row.textContent(), /Backup start time/);
   });
   await step('a task cannot be offered itself, and a missing choice is reported', async () => {
-    await taskRow(page, 'Warm-up').click();
+    await openEdit(page, taskRow(page, 'Warm-up'));
     await page.waitForSelector('.dialog');
     const options = await page.$$eval('select[aria-label="Task to follow"] option', (els) => els.map((e) => e.textContent));
     assert.ok(options.some((o) => o.startsWith('Study SQL')));
@@ -339,7 +347,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.click('.dialog-footer .btn.primary');
     await page.waitForSelector('.dialog', { state: 'detached' });
 
-    await taskRow(page, 'Breakfast').click();
+    await openEdit(page, taskRow(page, 'Breakfast'));
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Other tasks follow this task');
     assert.match(await page.textContent('.overlay:last-child .dialog-message'), /“Walk”/);
@@ -349,7 +357,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('.overlay', { state: 'detached' });
     assert.ok((await rowTexts(page, 1)).includes('Breakfast'), 'cancel keeps it');
 
-    await taskRow(page, 'Breakfast').click();
+    await openEdit(page, taskRow(page, 'Breakfast'));
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Other tasks follow this task');
     await page.click('.overlay:last-child .btn.danger');
@@ -381,7 +389,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.deepEqual(await page.evaluate(() => window.__played), [['chime', 60]], 'no sound for un-ticking');
   });
   await step('edit a one-off task', async () => {
-    await taskRow(page, 'Dentist').click();
+    await openEdit(page, taskRow(page, 'Dentist'));
     await page.waitForSelector('.dialog');
     assert.equal(await page.inputValue('#f-title'), 'Dentist');
     await page.fill('#f-title', 'Dentist (moved)');
@@ -390,7 +398,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.ok((await rowTexts(page, 3)).includes('Dentist (moved)'));
   });
   await step('editing one repeating occurrence: scope chooser, "This occurrence only"', async () => {
-    await taskRow(page, 'Study SQL').click();
+    await openEdit(page, taskRow(page, 'Study SQL'));
     await page.waitForSelector('.dialog');
     await page.fill('#f-title', 'Study SQL (today)');
     await page.click('.dialog-footer .btn.primary');
@@ -406,7 +414,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.click('button:text-is("Today")');
   });
   await step('changing the repeat pattern disables "This occurrence only"', async () => {
-    await taskRow(page, 'Class').first().click();
+    await openEdit(page, taskRow(page, 'Class').first());
     await page.waitForSelector('.dialog');
     await page.fill('input[aria-label="Repeat every"]', '3');
     await page.click('.dialog-footer .btn.primary');
@@ -417,7 +425,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.keyboard.press('Escape');
   });
   await step('deleting a repeating task asks for scope; deleting a one-off asks to confirm', async () => {
-    await taskRow(page, 'Class').first().click();
+    await openEdit(page, taskRow(page, 'Class').first());
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Delete which occurrences');
     await page.click('input[name="scope"] >> nth=2');
@@ -425,7 +433,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('.overlay', { state: 'detached' });
     assert.ok(!(await page.textContent('#view')).includes('Class'));
 
-    await taskRow(page, 'Tahajjud').click();
+    await openEdit(page, taskRow(page, 'Tahajjud'));
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Delete "Tahajjud"?');
     await page.click('.overlay:last-child .btn.danger');
@@ -433,7 +441,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.ok(!(await page.textContent('#view')).includes('Tahajjud'));
   });
   await step('duplicate', async () => {
-    await taskRow(page, 'Exercise').click();
+    await openEdit(page, taskRow(page, 'Exercise'));
     await page.click('.dialog-footer .btn:text-is("Duplicate")');
     await page.waitForSelector('.dialog', { state: 'detached' });
     assert.ok((await rowTexts(page, 1)).includes('Exercise (copy)'));
@@ -464,7 +472,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('#bell-panel:not([hidden]) .upcoming-item');
     await shot(page, 'bell');
     await page.click('#bell-panel .upcoming-item');
-    await page.waitForSelector('.dialog');
+    await page.waitForSelector('#details-edit');
     await page.click('.dialog-header .icon-btn');
     await page.waitForSelector('.dialog', { state: 'detached' });
     assert.equal(await page.locator('#bell-btn .bell-badge').count(), 0);
@@ -487,10 +495,111 @@ async function setTime(page, hour, minute, ampm) {
   await step('side menu: Daily View, Statistics, Settings, Export data, Import data; Esc closes it', async () => {
     await page.click('#menu-btn');
     const items = await page.$$eval('#drawer .drawer-item', (els) => els.map((e) => e.textContent.trim()));
-    assert.deepEqual(items, ['Daily View', 'Statistics', 'Settings', 'Export data…', 'Import data…']);
+    assert.deepEqual(items, ['Daily View', 'Free To-Do list', 'Statistics', 'Settings', 'Export data…', 'Import data…']);
     await shot(page, 'drawer');
     await page.keyboard.press('Escape');
     assert.equal(await page.isHidden('#drawer'), true);
+  });
+  console.log('Free To-Do list and task details');
+  await step('the Free To-Do list: empty at first, quick add with Enter, add with details', async () => {
+    await page.click('#menu-btn');
+    await page.click('#drawer .drawer-item:has-text("Free To-Do list")');
+    await page.waitForSelector('#free-empty');
+    assert.equal(await page.textContent('.day-title'), 'Free To-Do list');
+    await page.fill('#free-quick', 'Buy paint');
+    await page.press('#free-quick', 'Enter');
+    await page.waitForSelector('.free-row:has-text("Buy paint")');
+    assert.equal(await page.inputValue('#free-quick'), '', 'the field is cleared for the next task');
+    await page.click('#free-details');
+    await page.fill('#ff-title', 'Fix the bike');
+    await page.selectOption('#ff-priority', 'High');
+    await page.fill('#ff-duration', '45');
+    await page.fill('#ff-notes', 'tyre;chain');
+    await page.click('.dialog-footer .btn.primary');
+    await page.waitForSelector('.free-row:has-text("Fix the bike")');
+    const bike = page.locator('.free-row:has-text("Fix the bike")');
+    assert.match(await bike.textContent(), /45m/);
+    assert.match(await bike.textContent(), /High priority/);
+    assert.match(await bike.textContent(), /tyre;chain/);
+    await shot(page, 'free-list');
+  });
+  await step('free tasks: tick, edit, move down, clear done', async () => {
+    const paint = page.locator('.free-row:has-text("Buy paint")');
+    await paint.locator('.check').click();
+    await page.waitForSelector('.free-row.done:has-text("Buy paint")');
+    assert.equal(await page.locator('.free-row.done .btn.primary').count(), 0, 'a done task has no Schedule button');
+    await page.click('#free-clear');
+    await page.waitForSelector('.free-row:has-text("Buy paint")', { state: 'detached' });
+    await page.click('.free-row:has-text("Fix the bike") .btn:text-is("Edit")');
+    await page.fill('#ff-title', 'Fix the red bike');
+    await page.click('.dialog-footer .btn.primary');
+    await page.waitForSelector('.free-row:has-text("Fix the red bike")');
+  });
+  await step('Schedule task opens the usual window filled in, and saving moves it to the Daily View', async () => {
+    await page.click('.free-row:has-text("Fix the red bike") .btn.primary');
+    await page.waitForSelector('#f-title');
+    assert.equal(await page.inputValue('#f-title'), 'Fix the red bike');
+    assert.equal(await page.inputValue('#f-notes'), 'tyre;chain');
+    assert.equal(await page.inputValue('#f-priority'), 'High');
+    await setTime(page, 4, 30, 'PM');
+    await page.click('.dialog-footer .btn.primary');
+    await page.waitForSelector('.dialog', { state: 'detached' });
+    await page.waitForSelector('#free-empty');
+    await page.click('#menu-btn');
+    await page.click('#drawer .drawer-item:has-text("Daily View")');
+    await page.waitForSelector('.day-chip');
+    assert.equal(await taskRow(page, 'Fix the red bike').count(), 1);
+  });
+  await step('clicking a task shows its details; Edit task leads to the form; Move to free list brings it back', async () => {
+    await taskRow(page, 'Fix the red bike').click();
+    await page.waitForSelector('#details-edit');
+    assert.equal(await page.locator('#f-title').count(), 0, 'not the edit form');
+    const text = await page.textContent('.dialog');
+    assert.match(text, /4:30 PM/);
+    assert.match(text, /45m/);
+    assert.match(text, /tyre;chain/, 'notes are shown as written');
+    await shot(page, 'task-details');
+    await page.click('#details-edit');
+    await page.waitForSelector('#f-title');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.dialog', { state: 'detached' });
+    await taskRow(page, 'Fix the red bike').click();
+    await page.waitForSelector('#details-free');
+    await page.click('#details-free');
+    await page.locator('.dialog-footer .btn.primary').last().click();
+    await page.waitForSelector('.dialog', { state: 'detached' });
+    await page.waitForFunction(() => !document.body.textContent.includes('Fix the red bike'));
+    await page.click('#menu-btn');
+    assert.match(await page.textContent('#drawer .drawer-item:has-text("Free To-Do list")'), /\(1\)/);
+    await page.click('#drawer .drawer-item:has-text("Free To-Do list")');
+    await page.waitForSelector('.free-row:has-text("Fix the red bike")');
+    await page.click('.free-row:has-text("Fix the red bike") .btn.danger');
+    await page.locator('.dialog-footer .btn.danger').last().click();
+    await page.waitForSelector('#free-empty');
+    await page.click('#menu-btn');
+    await page.click('#drawer .drawer-item:has-text("Daily View")');
+    await page.waitForSelector('.day-chip');
+  });
+  await step('the form offers "Show one note at random" only when the full-screen alert is on, and keeps it', async () => {
+    await page.click('#add-btn');
+    await page.waitForSelector('#f-title');
+    await page.fill('#f-title', 'Random notes task');
+    if (await page.isChecked('#f-fullscreen')) await page.uncheck('#f-fullscreen');
+    assert.equal(await page.locator('#f-random-notes').count(), 0);
+    await page.check('#f-fullscreen');
+    await page.waitForSelector('#f-random-notes');
+    await page.check('#f-random-notes');
+    await page.fill('#f-notes', 'first; second; third');
+    await page.click('.dialog-footer .btn.primary');
+    await page.waitForSelector('.dialog', { state: 'detached' });
+    await taskRow(page, 'Random notes task').click();
+    await page.waitForSelector('#details-edit');
+    assert.match(await page.textContent('.dialog'), /One note at random/);
+    await page.click('#details-edit');
+    await page.waitForSelector('#f-random-notes');
+    assert.equal(await page.isChecked('#f-random-notes'), true);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.dialog', { state: 'detached' });
   });
   await step('menu opens Settings', async () => {
     await page.click('#menu-btn');
@@ -691,6 +800,14 @@ async function setTime(page, hour, minute, ampm) {
     assert.equal(await preview((el) => el.querySelectorAll('.alert-notes').length), 0, 'notes hidden');
     assert.ok(!(await preview((el) => el.textContent)).includes('Zone:'), 'zone hidden');
     await shot(page, 'settings-fullscreen');
+    const previewButtons = () => preview((el) => [...el.querySelectorAll('.alert-actions button')].map((b) => b.dataset.action));
+    assert.deepEqual(await previewButtons(), ['dismiss', 'snooze', 'open', 'done']);
+    await page.click('input[aria-label="Snooze"]');
+    await page.click('input[aria-label="Mark as Done"]');
+    await page.waitForFunction(() => document.querySelectorAll('.alert-preview .alert-actions button').length === 2);
+    assert.deepEqual(await previewButtons(), ['dismiss', 'open'], 'the preview follows the choice; "Got it" stays');
+    assert.deepEqual(service.getSettings().alertAppearance.buttons, { snooze: false, open: true, done: false });
+    assert.equal(await page.locator('input[aria-label="Got it"]').count(), 0, 'no switch for "Got it"');
 
     await page.click('button:text-is("High contrast")');
     await page.waitForFunction(() => document.querySelector('.alert-preview .alert-stage').style.getPropertyValue('--a-bg') === '#000000');
@@ -823,6 +940,17 @@ async function setTime(page, hour, minute, ampm) {
     await p.evaluate(([st]) => window.__render(st), [{ items: [{ id: 'y', taskId: 't', dateKey: 'd', title: 'No notes shown', notes: 'hidden', startLabel: '1:00 PM', endLabel: '2:00 PM',
       durationLabel: '1h 0m', zoneName: 'Dhuhr → Asr', zoneIndex: 2, categoryName: '', categoryColor: '', priority: 'Low', snoozed: false }], appearance: look, snoozeMinutes: 5, guardMs: 0 }]);
     assert.equal((await p.$$('.alert-notes')).length, 0);
+    // buttons: all four by default, "Got it" always stays
+    const buttonsOf = () => p.$$eval('.alert-actions button', (els) => els.map((e) => e.dataset.action));
+    assert.deepEqual(await buttonsOf(), ['dismiss', 'snooze', 'open', 'done']);
+    look.buttons = { snooze: false, open: true, done: false };
+    await p.evaluate(([st]) => window.__render(st), [{ items: [{ id: 'z', taskId: 't', dateKey: 'd', title: 'Fewer buttons', notes: '', startLabel: '1:00 PM', endLabel: '2:00 PM',
+      durationLabel: '1h 0m', zoneName: 'Dhuhr → Asr', zoneIndex: 2, categoryName: '', categoryColor: '', priority: 'Low', snoozed: false }], appearance: look, snoozeMinutes: 5, guardMs: 0 }]);
+    assert.deepEqual(await buttonsOf(), ['dismiss', 'open']);
+    look.buttons = { snooze: false, open: false, done: false };
+    await p.evaluate(([st]) => window.__render(st), [{ items: [{ id: 'w', taskId: 't', dateKey: 'd', title: 'Only Got it', notes: '', startLabel: '1:00 PM', endLabel: '2:00 PM',
+      durationLabel: '1h 0m', zoneName: 'Dhuhr → Asr', zoneIndex: 2, categoryName: '', categoryColor: '', priority: 'Low', snoozed: false }], appearance: look, snoozeMinutes: 5, guardMs: 0 }]);
+    assert.deepEqual(await buttonsOf(), ['dismiss']);
     assert.deepEqual(realErrors(alert.errors), []);
     await alert.browser.close();
   });

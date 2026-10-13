@@ -24,7 +24,7 @@ class TaskFormMethods {
       date: key,
       recurrence: null,
       // empty list = the default reminder time from Settings; the full-screen switch follows the Settings default
-      reminders: { enabled: true, offsets: [], fullScreen: Boolean(this.settings.fullScreenDefaultForNewTasks) },
+      reminders: { enabled: true, offsets: [], fullScreen: Boolean(this.settings.fullScreenDefaultForNewTasks), randomNotes: false },
       priority: 'Medium',
       categoryId: null,
       notes: '',
@@ -130,6 +130,7 @@ class TaskFormMethods {
         enabled: Boolean(form.reminders && form.reminders.enabled),
         offsets: form.reminders && Array.isArray(form.reminders.offsets) ? form.reminders.offsets : [],
         fullScreen: Boolean(form.reminders && form.reminders.fullScreen),
+        randomNotes: Boolean(form.reminders && form.reminders.randomNotes),
       },
     };
     return { fields, recurrence: form.recurrence ? normalizeRule(form.recurrence) : null, date: form.date };
@@ -144,6 +145,8 @@ class TaskFormMethods {
       const task = createTask({ id: this.newId(), ...fields, recurrence, date });
       this.checkDependencies(task);
       this.data.tasks.push(task);
+      // Scheduling a free task moves it out of the free list.
+      if (typeof payload.fromFreeTaskId === 'string') this.data.freeTasks = (this.data.freeTasks || []).filter((x) => x.id !== payload.fromFreeTaskId);
       if (date) this.refreshFrozenOccurrence(task.id, date); // a task added for a day that is already over
       this.changed();
       return { ok: true, taskId: task.id };

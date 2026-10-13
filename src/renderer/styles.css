@@ -608,3 +608,26 @@ input.onoff:checked ~ .onoff-state { color: var(--accent); }
 :root[dir='rtl'] * { letter-spacing: 0 !important; } /* spaced letters would break Arabic joining */
 :root[dir='rtl'] .popover h3, :root[dir='rtl'] .day-chip-wd { text-transform: none; }
 .lang-switch { direction: ltr; }
+
+/* ---- Free To-Do list ---- */
+.free-count { font-size: 13px; font-weight: 600; color: var(--text-soft); }
+.free-card .zone-body { padding: 10px 14px 14px; }
+.free-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; }
+.free-row + .free-row { margin-top: 6px; }
+.free-row:hover { background: var(--surface-2); }
+.free-row.done .free-title { text-decoration: line-through; color: var(--text-soft); }
+.free-title { white-space: normal; }
+.free-notes { margin-top: 5px; font-size: 13px; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; text-align: start; max-width: 60ch; }
+.free-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex: none; }
+.free-add { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; padding: 12px 0; background: var(--bg); }
+.free-add input { flex: 1; min-width: 200px; height: 44px; }
+@media (max-width: 720px) { .free-row { flex-wrap: wrap; } .free-actions { width: 100%; justify-content: flex-start; } }
+
+/* ---- Task details window ---- */
+.details-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.details-head .readout { min-height: 32px; padding: 4px 12px; }
+.details-grid { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin-top: 14px; }
+.details-label { color: var(--text-soft); font-size: 13px; font-weight: 600; }
+.details-value { font-weight: 600; unicode-bidi: plaintext; text-align: start; }
+.details-notes { margin-top: 16px; }
+.details-notes-text { margin-top: 6px; padding: 10px 12px; background: var(--chip); border: 1px solid var(--border); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; unicode-bidi: plaintext; text-align: start; }

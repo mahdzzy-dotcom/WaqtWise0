@@ -80,6 +80,12 @@ Do these once after installing. They are the parts that cannot be tested without
 
 22. **Arabic**: Settings -> Language / اللغة -> العربية. The whole app turns right to left at once (menu, forms, Statistics, the notification texts). Numbers stay 0123456789. Open a task form, Statistics and a full-screen reminder (Settings -> Preview full screen) and look for any English left over. Switch back to English: everything returns as before.
 
-23. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 22 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
+23. **Free To-Do list and task details**: menu -> Free To-Do list. Add a task by typing and pressing Enter, and one with "Add with details". Tick one, then "Clear done". Press **Schedule task** on another: the usual window opens filled in; choose a time and Save: the task is in the Daily View and gone from the free list. In the Daily View click a task: you get its details (not the edit window); **Edit task** opens the edit window; **Move to free list** brings a one-time task back. Export and import: the free list comes back.
+
+24. **Random notes**: make a task for 2 minutes from now with the full-screen alert on, tick **Show one note at random**, and write `first; second; third` in Notes. When the alert appears it shows one of the three. Snooze it: when it comes back a different note shows. On another task day a different one shows too, and all three appear before any repeats. A task with one note, or with the switch off, shows its notes as written.
+
+25. **Alert buttons**: Settings -> Full-screen reminder -> **Buttons shown**: switch off Snooze and Mark as Done. The preview shows only "Got it" and "Open task". Click **Preview full screen**: the real alert has the same buttons. Switch them on again. "Got it" has no switch.
+
+26. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 25 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
 
 If any of these fails, note which number and what you saw, and send it back.
