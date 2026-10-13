@@ -1,0 +1,13 @@
+# Checks every week for newer versions of the tools the app uses (including Electron) and opens a pull request.
+# Each pull request runs the tests and the screen check, so a bad update is visible before it is merged.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
