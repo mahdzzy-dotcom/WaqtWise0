@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 22
       - name: Install
-        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        run: npm ci
       - name: Install the test browser
         # Playwright is a check tool only; it is not part of the app.
         run: npm install --no-save playwright && npx playwright install --with-deps chromium

@@ -14,8 +14,8 @@ jobs:
           node-version: 22
       - name: Install
         shell: bash
-        # npm ci installs exactly what package-lock.json lists; without the file yet, fall back to npm install
-        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        # npm ci installs exactly what package-lock.json lists, and stops with a clear error if the file is missing
+        run: npm ci
       - name: Build the installer
         run: npm run dist
         env:
