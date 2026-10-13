@@ -41,6 +41,10 @@ Fixed Time, Relative to Prayer, and Relative to Task ("15 minutes after the end 
 A welcome screen asks for the city once. Settings -> Reminders has a "Send a test notification" button that also
 checks that Windows shows notifications; clicking one opens WaqtWise on the Daily View.
 
+## Keep package-lock.json
+
+The workflows use `npm ci`, which needs `package-lock.json` in the repository. It is not part of the zip files sent for review: keep the one that is already on GitHub (or make a new one with the Lockfile workflow after changing a dependency).
+
 ## Later
 
 See `docs/TODO.md` (more countries and cities).

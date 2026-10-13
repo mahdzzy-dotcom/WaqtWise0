@@ -70,7 +70,7 @@ function validateStart(start) {
     if (typeof start.taskId !== 'string' || start.taskId === '') errors.push(t('Choose the task this one should follow'));
     if (start.point !== 'start' && start.point !== 'end') errors.push(t('Choose the start or the end of that task'));
     if (start.direction !== 'before' && start.direction !== 'after') errors.push(t('Choose Before or After that task'));
-    if (!Number.isInteger(start.minutes) || start.minutes < 0) errors.push(t('Minutes must be a whole number, 0 or more'));
+    if (!Number.isInteger(start.minutes) || start.minutes < 0 || start.minutes > MAX_OFFSET_MINUTES) errors.push(t('Minutes must be a whole number from 0 to {max}', { max: MAX_OFFSET_MINUTES }));
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start.fallbackTime || '')) errors.push(t('Choose a backup start time'));
     return errors;
   }

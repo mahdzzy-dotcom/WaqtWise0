@@ -193,3 +193,11 @@ test('Electron is a version that still gets security updates (42 or newer; 37 to
   const major = Number(/(\d+)/.exec(pkg.devDependencies.electron)[1]);
   assert.ok(major >= 42, `Electron ${major} is no longer supported`);
 });
+
+test('the workflows install with "npm ci" (exactly the versions in package-lock.json)', () => {
+  for (const name of ['build', 'test', 'ui-check']) {
+    const text = fs.readFileSync(path.join(root, '.github/workflows', `${name}.yml`), 'utf8');
+    assert.match(text, /run: npm ci\b/, name);
+    assert.doesNotMatch(text, /else npm install/, name);
+  }
+});

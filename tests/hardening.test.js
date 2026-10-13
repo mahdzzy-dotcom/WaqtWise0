@@ -4,7 +4,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createTask, normalizeData, ReminderEngine, validateTask, validateRule, normalizeRule, getOccurrences, emptyData } = require('../src/core');
+const { createTask, normalizeData, ReminderEngine, validateTask, validateStart, validateRule, normalizeRule, getOccurrences, emptyData } = require('../src/core');
 const { MAX_DURATION_MINUTES, MAX_OFFSET_MINUTES, MAX_INTERVAL, MAX_COUNT, MAX_TASKS } = require('../src/core/limits');
 const { at, provider } = require('./helpers');
 
@@ -102,4 +102,21 @@ test('an enormous task list in a file is cut with a warning', () => {
   const { data, warnings } = normalizeData({ ...emptyData(), tasks });
   assert.equal(data.tasks.length, MAX_TASKS);
   assert.equal(warnings.length, 1);
+});
+
+test('"start after another task" has the same upper limit on its minutes, in the logic and in files', () => {
+  const rel = (minutes) => ({ mode: 'task', taskId: 'other', point: 'end', direction: 'after', minutes, fallbackTime: '09:00' });
+  for (const minutes of [MAX_OFFSET_MINUTES + 1, Number.MAX_SAFE_INTEGER, 1e15, NaN, -1, 1.5]) {
+    assert.notDeepEqual(validateStart(rel(minutes)), [], String(minutes));
+    assert.throws(() => createTask(base({ start: rel(minutes) })), undefined, String(minutes));
+  }
+  assert.deepEqual(validateStart(rel(MAX_OFFSET_MINUTES)), []);
+  // in a data file: the task is skipped with a warning, and a bad override value is dropped
+  const other = createTask(base({ id: 'other' }));
+  const bad = { ...createTask(base({ id: 'bad', start: rel(10) })), start: rel(Number.MAX_SAFE_INTEGER) };
+  const withOverride = { ...createTask(base({ id: 'ov', start: rel(10) })), overrides: { '2026-10-04': { start: rel(Number.MAX_SAFE_INTEGER), title: 'ok' } } };
+  const { data, warnings } = normalizeData({ ...emptyData(), tasks: [other, bad, withOverride] });
+  assert.deepEqual(data.tasks.map((t) => t.id), ['other', 'ov']);
+  assert.equal(warnings.length, 1);
+  assert.deepEqual(data.tasks[1].overrides['2026-10-04'], { title: 'ok' });
 });
