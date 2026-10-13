@@ -1,0 +1,23 @@
+name: Screen check
+
+# Clicks through the real screens (English and Arabic) in a headless browser.
+# Runs by hand or on every push; it never changes the installer build.
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Install the test browser
+        # Playwright is a check tool only; it is not part of the app.
+        run: npm install --no-save playwright && npx playwright install --with-deps chromium
+      - name: Check the screens
+        run: node tools/ui-check.js
