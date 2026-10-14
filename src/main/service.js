@@ -24,23 +24,12 @@ function defaultProviderFactory(settings) {
   });
 }
 
-// A short reason a person can understand for a failed save.
-function describeSaveError(error) {
-  const code = error && error.code;
-  if (code === 'ENOSPC') return t('The disk is full.');
-  if (code === 'EACCES' || code === 'EPERM' || code === 'EBUSY') return t('The data file is locked or protected (another program, such as an antivirus, may be using it).');
-  if (code === 'EROFS') return t('The disk is read-only.');
-  return String((error && error.message) || error);
-}
-
 class PlannerService {
   // deps: { store, now, newId, providerFactory, onDataChanged(), onSettingsChanged(settings) }
   constructor(deps) {
     this.store = deps.store;
     this.now = deps.now || (() => new Date());
     this.newId = deps.newId || (() => crypto.randomUUID());
-    this.random = deps.random || Math.random;
-    this.saveProblem = null;
     this.providerFactory = deps.providerFactory || defaultProviderFactory;
     this.onDataChanged = deps.onDataChanged || (() => {});
     this.onSettingsChanged = deps.onSettingsChanged || (() => {});
@@ -100,29 +89,8 @@ class PlannerService {
     return [6, 0, 1].includes(this.settings.weekStart) ? this.settings.weekStart : 0;
   }
 
-  // Saves the data. If saving fails the problem is remembered (the window shows a banner until a save works) and the error is thrown.
   persist() {
-    try {
-      this.store.save(this.data);
-      this.saveProblem = null;
-    } catch (error) {
-      this.saveProblem = { message: describeSaveError(error), since: this.now().toISOString() };
-      throw error;
-    }
-  }
-
-  getSaveStatus() {
-    return this.saveProblem ? { ok: false, ...this.saveProblem } : { ok: true };
-  }
-
-  // "Try again" on the banner.
-  retrySave() {
-    try {
-      this.persist();
-    } catch (error) {
-      // the status says why
-    }
-    return this.getSaveStatus();
+    this.store.save(this.data);
   }
 
   changed() {
@@ -188,7 +156,6 @@ const MIXINS = [
   require('./planner/settings-categories').SettingsMethods,
   require('./planner/data-transfer').DataTransferMethods,
   require('./planner/history').HistoryMethods,
-  require('./planner/free-tasks').FreeTaskMethods,
 ];
 for (const mixin of MIXINS) {
   for (const name of Object.getOwnPropertyNames(mixin.prototype)) {
@@ -201,7 +168,6 @@ const PUBLIC_METHODS = [
   'bootstrap', 'getDay', 'getStats', 'getUpcoming', 'getMissed', 'dismissMissed', 'clearMissed', 'newTaskDefaults', 'getTaskForEdit', 'previewForm', 'saveTask',
   'getReferenceChoices', 'getDeleteImpact', 'getAlertPreset', 'deleteTask', 'setDone', 'duplicateTask', 'getSettings', 'saveSettings', 'addCategory', 'updateCategory',
   'deleteCategory', 'listBackups', 'restoreBackup', 'getCityInfo',
-  'getFreeTasks', 'getFreeTaskCount', 'saveFreeTask', 'deleteFreeTask', 'setFreeDone', 'clearFreeDone', 'moveFreeTask', 'getFreeTaskForSchedule', 'getTaskDetails', 'getSaveStatus', 'retrySave',
 ];
 
 module.exports = { PlannerService, PUBLIC_METHODS, defaultProviderFactory };

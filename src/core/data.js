@@ -3,22 +3,19 @@
 // The saved data and the export/import file format.
 //
 // Saved data (data.json in the user's profile folder):
-//   { version, settings, categories, tasks, freeTasks, noteRotation, reminderState, missedReminders }
-// (noteRotation: which of a task's several notes was shown last; it is NOT part of the export file.)
+//   { version, settings, categories, tasks, reminderState, missedReminders }
 // (missedReminders: reminders that came due while the computer was off or asleep and were not handled yet;
 //  they are shown on the bell and are NOT part of the export file.)
 //
 // Export file (documented in docs/DATA_FORMAT.md):
-//   { app: 'waqtwise', formatVersion: 1, exportedAt, settings, categories, tasks, freeTasks, statsHistory }
+//   { app: 'waqtwise', formatVersion: 1, exportedAt, settings, categories, tasks }
 //
 // Derived values (zones, end times, durations, occurrences, prayer times) are never saved.
 
 const { t } = require('./i18n');
 const { DEFAULT_SETTINGS, sanitizeSettings } = require('./settings');
 const { validateTask, validateStart, validateDuration, validateReminders, PRIORITIES } = require('./tasks');
-const { MAX_TASKS, MAX_FREE_TASKS } = require('./limits');
-const { normalizeFreeTask } = require('./free-tasks');
-const { normalizeNoteRotation } = require('./random-notes');
+const { MAX_TASKS } = require('./limits');
 const { normalizeRule } = require('./recurrence');
 const { emptyState, normalizeState } = require('./reminder-engine');
 const { isValidKey } = require('./time');
@@ -49,8 +46,6 @@ function emptyData() {
     settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
     categories: defaultCategories(),
     tasks: [],
-    freeTasks: [],
-    noteRotation: {},
     reminderState: emptyState(),
     missedReminders: [],
     statsHistory: { through: null, days: {} },
@@ -110,7 +105,6 @@ function cleanReminders(raw) {
   if (!isPlainObject(raw)) return { enabled: false, offsets: [] };
   const out = { enabled: raw.enabled === true, offsets: Array.isArray(raw.offsets) ? Array.from(new Set(raw.offsets)).sort((a, b) => a - b) : raw.offsets };
   if ('fullScreen' in raw) out.fullScreen = raw.fullScreen;
-  if ('randomNotes' in raw) out.randomNotes = raw.randomNotes;
   return out;
 }
 
@@ -161,14 +155,14 @@ function normalizeTask(raw) {
 
 // Clean up a whole data object (from disk or an import file).
 // Returns { data, warnings }. Never throws for individual bad items; they are skipped and reported.
-// Saved statistics of finished days: { through: 'YYYY-MM-DD' | null, days: { key: [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone, completedMs|null], ...] } } (older rows have no last item)
+// Saved statistics of finished days: { through: 'YYYY-MM-DD' | null, days: { key: [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone], ...] } }
 function normalizeStatsHistory(raw) {
   const empty = { through: null, days: {} };
   if (!isPlainObject(raw) || !isValidKey(raw.through) || !isPlainObject(raw.days)) return empty;
   const days = {};
   for (const [key, list] of Object.entries(raw.days)) {
     if (!isValidKey(key) || key > raw.through || !Array.isArray(list)) continue;
-    const clean = list.filter((a) => Array.isArray(a) && (a.length === 8 || (a.length === 9 && (a[8] === null || Number.isFinite(a[8]))))
+    const clean = list.filter((a) => Array.isArray(a) && a.length === 8
       && typeof a[0] === 'string' && typeof a[1] === 'string' && typeof a[2] === 'string'
       && (a[3] === null || typeof a[3] === 'string') && Number.isFinite(a[4]) && (a[5] === 0 || a[5] === 1)
       && Number.isFinite(a[6]) && Number.isInteger(a[7]));
@@ -207,29 +201,6 @@ function normalizeData(raw) {
     tasks.push(task);
   }
 
-  const freeTasks = [];
-  const freeIds = new Set();
-  let rawFree = Array.isArray(source.freeTasks) ? source.freeTasks : [];
-  if (rawFree.length > MAX_FREE_TASKS) {
-    warnings.push(t('Only the first {n} free tasks were loaded', { n: MAX_FREE_TASKS }));
-    rawFree = rawFree.slice(0, MAX_FREE_TASKS);
-  }
-  for (const rawItem of rawFree) {
-    const { task, error } = normalizeFreeTask(rawItem);
-    const label = isPlainObject(rawItem) && rawItem.title ? `"${rawItem.title}"` : t('A free task');
-    if (error) {
-      warnings.push(t('{label} was skipped: {error}', { label, error }));
-      continue;
-    }
-    if (freeIds.has(task.id) || ids.has(task.id)) {
-      warnings.push(t('{label} was skipped because its id is used twice', { label }));
-      continue;
-    }
-    freeIds.add(task.id);
-    if (task.categoryId !== null && !categoryIds.has(task.categoryId)) task.categoryId = null;
-    freeTasks.push(task);
-  }
-
   const restored = normalizeState(source.reminderState);
   const reminderState = restored.state;
   if (restored.dropped > 0) warnings.push(t('Some saved reminder information was damaged and was reset'));
@@ -247,7 +218,7 @@ function normalizeData(raw) {
     .slice(-50);
 
   return {
-    data: { version: DATA_VERSION, settings, categories, tasks, freeTasks, noteRotation: normalizeNoteRotation(source.noteRotation, new Set(tasks.map((x) => x.id))), reminderState, missedReminders, statsHistory: normalizeStatsHistory(source.statsHistory) },
+    data: { version: DATA_VERSION, settings, categories, tasks, reminderState, missedReminders, statsHistory: normalizeStatsHistory(source.statsHistory) },
     warnings,
   };
 }
@@ -260,8 +231,6 @@ function buildExport(data, now = new Date()) {
     settings: data.settings,
     categories: data.categories,
     tasks: data.tasks,
-    freeTasks: data.freeTasks || [],
-    statsHistory: data.statsHistory || { through: null, days: {} },
   };
 }
 
@@ -286,10 +255,7 @@ function parseImport(input) {
     throw new Error(t('This backup was made by a newer version of WaqtWise. Please update the app first.'));
   }
   // Future versions: convert older formats here, one step at a time.
-  const result = normalizeData(parsed);
-  // Files made before the saved statistics were exported have no history: the caller keeps its own then.
-  result.hasHistory = isPlainObject(parsed.statsHistory);
-  return result;
+  return normalizeData(parsed);
 }
 
 module.exports = {

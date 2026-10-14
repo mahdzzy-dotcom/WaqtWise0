@@ -122,10 +122,7 @@ function createWindow({ visible }) {
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
-    if (showOnReady && mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.maximize(); // always opens full size
-      mainWindow.show();
-    }
+    if (showOnReady && mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
   });
 
   // The window only ever shows our own page.
@@ -161,7 +158,6 @@ function showWindow() {
   }
   showOnReady = true;
   if (mainWindow.isMinimized()) mainWindow.restore();
-  if (!mainWindow.isMaximized()) mainWindow.maximize(); // opening from the tray brings it back full size
   mainWindow.show();
   mainWindow.focus();
 }

@@ -54,7 +54,17 @@
   }
 
   function section(title, ...children) {
-    return h('section', { class: 'settings-section' }, h('h2', { text: title }), ...children);
+    const body = h('div', { class: 'settings-section-body' }, ...children);
+    const sectionBox = h('section', { class: 'settings-section' });
+    const toggle = h('button', {
+      type: 'button', class: 'settings-section-toggle', 'aria-expanded': 'true',
+      onclick: () => {
+        const collapsed = sectionBox.classList.toggle('collapsed');
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+      },
+    }, h('h2', { text: title }), h('span', { class: 'section-chevron', text: '⌄', 'aria-hidden': 'true' }));
+    sectionBox.append(toggle, body);
+    return sectionBox;
   }
 
   function row(label, control) {

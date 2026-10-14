@@ -278,7 +278,6 @@ class ReminderEngine {
         dateKey: occurrence.dateKey,
         title: occurrence.title,
         notes: occurrence.notes,
-        randomNotes: Boolean(occurrence.reminders && occurrence.reminders.randomNotes),
         priority: occurrence.priority,
         categoryId: occurrence.categoryId,
         durationMinutes: occurrence.durationMinutes,

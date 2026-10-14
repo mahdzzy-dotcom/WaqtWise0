@@ -203,34 +203,3 @@ test('Sound settings: defaults, choices and volumes are validated, and bad saved
   const clean = sanitizeSettings({ doneSound: 'nope', doneSoundVolume: 20, alertSound: 'pulse', alertSoundRepeat: 'x' });
   assert.deepEqual([clean.doneSound, clean.doneSoundVolume, clean.alertSound, clean.alertSoundRepeat], ['chime', 20, 'pulse', false]);
 });
-
-test('Alert buttons: all shown by default, each can be switched off, "Got it" cannot', () => {
-  assert.deepEqual(DEFAULT_ALERT_APPEARANCE.buttons, { snooze: true, open: true, done: true });
-  assert.deepEqual(validateAppearance({ buttons: { snooze: false, open: false, done: false } }), []);
-  assert.ok(validateAppearance({ buttons: { snooze: 'no' } }).length > 0);
-  assert.ok(validateAppearance({ buttons: { dismiss: false } }).length > 0, 'there is no switch for "Got it"');
-  const merged = mergeSettings(DEFAULT_SETTINGS, { alertAppearance: { buttons: { open: false } } });
-  assert.deepEqual(merged.alertAppearance.buttons, { snooze: true, open: false, done: true }, 'only the sent switch changes');
-  for (const preset of Object.values(ALERT_PRESETS)) assert.deepEqual(preset.appearance.buttons, { snooze: true, open: true, done: true });
-});
-
-test('Alert buttons: settings saved by an older version get all buttons; bad values fall back', () => {
-  const old = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-  delete old.alertAppearance.buttons;
-  assert.deepEqual(sanitizeSettings(old).alertAppearance.buttons, { snooze: true, open: true, done: true });
-  const odd = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-  odd.alertAppearance.buttons = { snooze: 'x', open: false };
-  assert.deepEqual(sanitizeSettings(odd).alertAppearance.buttons, { snooze: true, open: false, done: true });
-  const { data } = normalizeData({ settings: odd });
-  assert.equal(data.settings.alertAppearance.buttons.open, false);
-});
-
-test('Alert buttons: the choice is saved, travels with export and import, and reaches the alert', () => {
-  const s = makeService();
-  s.saveSettings({ alertAppearance: { buttons: { snooze: false, done: false } } });
-  assert.deepEqual(s.getAlertConfig().appearance.buttons, { snooze: false, open: true, done: false });
-  const exported = buildExport(s.data, new Date());
-  assert.equal(exported.settings.alertAppearance.buttons.snooze, false);
-  const { data } = parseImport(JSON.parse(JSON.stringify(exported)));
-  assert.equal(data.settings.alertAppearance.buttons.done, false);
-});

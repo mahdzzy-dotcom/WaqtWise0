@@ -219,7 +219,6 @@ class DayViewMethods {
       now: this.now(),
       query: query || {},
       weekStart: this.weekStart(),
-      lateAfterMinutes: this.settings.lateAfterMinutes,
     });
   }
 

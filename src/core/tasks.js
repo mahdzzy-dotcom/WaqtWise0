@@ -95,9 +95,6 @@ function validateReminders(reminders) {
   if ('fullScreen' in reminders && typeof reminders.fullScreen !== 'boolean') {
     return [t('The full-screen alert must be on or off')];
   }
-  if ('randomNotes' in reminders && typeof reminders.randomNotes !== 'boolean') {
-    return [t('The random note switch must be on or off')];
-  }
   return [];
 }
 

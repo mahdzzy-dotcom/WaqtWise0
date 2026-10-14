@@ -135,6 +135,9 @@ async function setTime(page, hour, minute, ampm) {
     assert.match(await taskRow(page, 'Night reading').textContent(), /next day/);
     assert.match(await page.locator('.zone.z2 .continues').first().textContent(), /Continues from/);
     assert.equal((await page.$$('.task .tag.warn')).length, 2, 'two overlapping tasks are flagged');
+    const conflict = page.locator('.tag.conflict').first();
+    assert.equal(await conflict.textContent(), 'Conflict', 'conflict metadata is compact');
+    assert.match(await conflict.getAttribute('title'), /Conflict with|Overlaps another task/, 'the conflicting task remains available as detail');
   });
   await step('Arabic titles display', async () => {
     assert.ok((await rowTexts(page, 5)).includes('مراجعة الدرس'));
@@ -540,6 +543,11 @@ async function setTime(page, hour, minute, ampm) {
   await step('every section is there', async () => {
     const titles = await page.$$eval('.settings-section h2', (els) => els.map((e) => e.textContent));
     assert.deepEqual(titles, ['اللغة / Language', 'Prayer Times', 'Reminders & Notifications', 'Application', 'Full-screen reminder', 'Sounds', 'Categories', 'Data']);
+    const fullScreenSection = page.locator('.settings-section').filter({ hasText: 'Full-screen reminder' }).first();
+    await fullScreenSection.locator('.settings-section-toggle').click();
+    assert.equal(await fullScreenSection.locator('.settings-section-body').isVisible(), false);
+    await fullScreenSection.locator('.settings-section-toggle').click();
+    assert.equal(await fullScreenSection.locator('.settings-section-body').isVisible(), true);
     await shot(page, 'settings');
   });
   await step('a custom city can be typed in (name, latitude, longitude, time zone) and the list can be used again', async () => {
@@ -718,6 +726,10 @@ async function setTime(page, hour, minute, ampm) {
     await page.click('button:text-is("Preview full screen")');
     await page.waitForTimeout(150);
     assert.ok((await page.evaluate(() => window.__exports)).includes('preview-alert'));
+    await page.setViewportSize({ width: 480, height: 800 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'Settings has no horizontal overflow at 480px');
+    assert.equal(await page.evaluate(() => document.querySelector('.alert-preview').getBoundingClientRect().right <= window.innerWidth + 1), true, 'full-screen preview stays inside the viewport');
+    await page.setViewportSize({ width: 1100, height: 1100 });
   });
   await step('back to the Daily View keeps working', async () => {
     await page.click('.back-link');
@@ -881,6 +893,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.ok(prev.y > title.y + title.height - 2, 'the arrows are under the title');
     assert.ok(next.x > prev.x + prev.width - 1, 'the next arrow is to the right of the previous one');
     await sp.setViewportSize({ width: 1000, height: 800 });
+    assert.equal(await sp.$$eval('.stats-card.kpi', (els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size), 2, 'medium Statistics width uses a balanced two-row KPI grid');
 
     await sp.click('.stats-seg button[data-range="day"]');
     await sp.waitForFunction(() => document.querySelector('.stats-seg button.on').dataset.range === 'day');

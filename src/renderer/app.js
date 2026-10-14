@@ -89,8 +89,9 @@
     if (t.inProgress) tags.push(h('span', { class: 'tag live', text: T('In progress') }));
     if (t.overlaps) {
       const names = (t.conflictWith || []).map((n) => `“${n}”`).join(T(', '));
-      tags.push(h('span', { class: 'tag warn conflict', title: T('Overlaps another task') },
-        WW.icon('warn', 13, 2.6), names ? T('Conflict with {names}', { names }) : T('Conflict')));
+      const detail = names ? T('Conflict with {names}', { names }) : T('Overlaps another task');
+      tags.push(h('span', { class: 'tag warn conflict', title: detail, 'aria-label': detail },
+        WW.icon('warn', 13, 2.6), T('Conflict')));
     }
     if (t.startWarning) tags.push(h('span', { class: 'tag warn', title: t.startWarning, text: T('⚠ Backup start time') }));
     if (t.extendsPastZoneEnd) tags.push(h('span', { class: 'tag', title: T('Continues into the next zone'), text: T('→ Continues into next zone') }));
@@ -114,8 +115,8 @@
     return h('div', {
       class: `task ${t.done ? 'done' : ''} ${t.overdue ? 'overdue' : ''} ${t.inProgress ? 'live' : ''}`, role: 'button', tabindex: '0',
       'aria-label': `${t.title}, ${t.startLabel}`,
-      onclick: () => WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }),
-      onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }); },
+      onclick: () => WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }),
+      onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }); },
     },
       check,
       h('div', { class: 'task-time' }, t.startLabel, t.afterMidnight ? h('small', { text: T('next day') }) : null),
@@ -145,7 +146,7 @@
     z.continued.forEach((c) =>
       body.appendChild(h('div', {
         class: 'continues', text: T('↳ Continues from “{title}” ({minutes} here, until {end})', { title: c.title, minutes: c.minutesLabel, end: c.endLabel }),
-        onclick: () => WW.openTaskDetails({ taskId: c.taskId, dateKey: c.dateKey }),
+        onclick: () => WW.openTaskForm({ mode: 'edit', taskId: c.taskId, dateKey: c.dateKey }),
       })));
     if (z.tasks.length === 0 && z.continued.length === 0) {
       body.appendChild(h('div', { class: 'empty-zone', text: T('No tasks in this zone yet.') }));
@@ -284,41 +285,8 @@
   // Called after anything changes the data.
   WW.afterChange = async function afterChange() {
     refreshBell();
-    WW.refreshSaveBanner();
     if (WW.state.view === 'daily') await WW.showDay(WW.state.dayKey);
     else if (WW.state.view === 'stats') await WW.showStats();
-    else if (WW.state.view === 'free') await WW.showFree();
-  };
-
-  // ---- Banner: the data could not be saved -----------------------------------------------------------------------
-
-  // Shown as long as the last save failed, and hidden by itself when a save works again.
-  WW.refreshSaveBanner = async function refreshSaveBanner() {
-    const banner = document.getElementById('save-banner');
-    if (!banner) return;
-    let status;
-    try {
-      status = await window.api.call('getSaveStatus');
-    } catch (error) {
-      return;
-    }
-    if (status.ok) {
-      banner.hidden = true;
-      clear(banner);
-      return;
-    }
-    clear(banner).append(
-      h('div', { class: 'save-text' },
-        T('Your changes could not be saved. Do not close WaqtWise yet.'),
-        h('span', { class: 'save-reason', text: status.message })),
-      h('button', { class: 'btn small', type: 'button', id: 'save-retry', text: T('Try again'), onclick: async () => {
-        try { await window.api.call('retrySave'); } catch (error) { /* the banner says why */ }
-        await WW.refreshSaveBanner();
-        const again = document.getElementById('save-banner');
-        if (again && again.hidden) WW.toast(T('Saved'));
-      } }),
-      h('button', { class: 'btn small', type: 'button', id: 'save-export', text: T('Export a copy'), onclick: () => WW.exportData() }));
-    banner.hidden = false;
   };
 
   // ---- Bell and menu ----------------------------------------------------------------------------------------------
@@ -377,7 +345,7 @@
           closePopovers();
           try { await WW.call('dismissMissed', { taskId: r.taskId, dateKey: r.dateKey }); } catch (error) { /* the task may be gone */ }
           refreshBell();
-          WW.openTaskDetails({ taskId: r.taskId, dateKey: r.dateKey });
+          WW.openTaskForm({ mode: 'edit', taskId: r.taskId, dateKey: r.dateKey });
         },
       },
         h('div', { class: 'when', text: r.title }),
@@ -391,9 +359,8 @@
     document.getElementById('menu-btn').setAttribute('aria-expanded', 'false');
   }
 
-  async function openDrawer() {
+  function openDrawer() {
     closePopovers();
-    if (WW.refreshFreeCount) await WW.refreshFreeCount();
     const drawer = document.getElementById('drawer');
     const item = (icon, label, fn, active) => h('button', {
       class: `drawer-item ${active ? 'active' : ''}`, type: 'button',
@@ -405,7 +372,6 @@
         h('div', { class: 'drawer-title', text: 'WaqtWise' }),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': T('Close menu'), onclick: closeDrawer }, WW.icon('close', 18, 2))),
       item('calendar', T('Daily View'), () => WW.showDaily(), WW.state.view === 'daily'),
-      item('check', T('Free To-Do list') + (WW.state.freeCount ? ` (${WW.state.freeCount})` : ''), () => WW.showFree(), WW.state.view === 'free'),
       item('chart', T('Statistics'), () => WW.showStats({ range: 'week' }), WW.state.view === 'stats'),
       item('gear', T('Settings'), () => WW.showSettings(), WW.state.view === 'settings'),
       h('div', { class: 'drawer-sep' }),
@@ -514,7 +480,6 @@
     if (WW.refreshBell) WW.refreshBell();
     if (WW.state.view === 'settings') WW.renderSettings();
     else if (WW.state.view === 'stats') await WW.showStats();
-    else if (WW.state.view === 'free') await WW.showFree();
     else await WW.showDay(WW.state.todayKey);
   }
 
@@ -531,7 +496,7 @@
           dlg.close();
           try { await WW.call('dismissMissed', { taskId: i.taskId, dateKey: i.dateKey }); } catch (error) { /* ignore */ }
           refreshBell();
-          WW.openTaskDetails({ taskId: i.taskId, dateKey: i.dateKey });
+          WW.openTaskForm({ mode: 'edit', taskId: i.taskId, dateKey: i.dateKey });
         },
       },
         h('div', { class: 'when', text: i.title }),
@@ -645,8 +610,6 @@
     }
 
     refreshBell();
-    WW.refreshSaveBanner();
-    setInterval(() => WW.refreshSaveBanner(), 15000);
     if (!WW.state.settings.welcomeShown) WW.showWelcome();
     hideSplash();
 
@@ -666,7 +629,7 @@
         if (!anyDialogOpen() && WW.state.settings && WW.state.settings.welcomeShown) WW.showDay(WW.state.todayKey || WW.state.dayKey);
       });
       window.api.on('open-task', ({ taskId, dateKey }) => {
-        if (taskId && dateKey) WW.openTaskDetails({ taskId, dateKey });
+        if (taskId && dateKey) WW.openTaskForm({ mode: 'edit', taskId, dateKey });
         else WW.showDay(WW.state.todayKey);
       });
     }
