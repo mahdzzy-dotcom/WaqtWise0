@@ -99,7 +99,6 @@
       return await window.api.call(method, ...args);
     } catch (error) {
       const raw = String((error && error.message) || error);
-      if (method !== 'getSaveStatus' && WW.refreshSaveBanner) WW.refreshSaveBanner();
       throw new Error(raw.replace(/^Error invoking remote method '[^']+': (Error: )?/, '').replace(/^Error: /, ''));
     }
   };
@@ -114,7 +113,12 @@
 
   WW.toast = function toast(message, kind) {
     const root = document.getElementById('toast-root');
-    const el = WW.h('div', { class: `toast ${kind || ''}`, text: message });
+    const text = String(message);
+    const className = kind || '';
+    const duplicate = Array.from(root.children).find((el) => el.textContent === text && el.className === `toast ${className}`);
+    if (duplicate) duplicate.remove();
+    while (root.children.length >= 3) root.firstElementChild.remove();
+    const el = WW.h('div', { class: `toast ${className}`, text });
     root.appendChild(el);
     setTimeout(() => el.remove(), 4500);
   };
