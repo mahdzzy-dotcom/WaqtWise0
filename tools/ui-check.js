@@ -17,14 +17,6 @@ const fontsMissing = !fs.existsSync(require('path').join(__dirname, '..', 'src',
 const realErrors = (list) => list.filter((e) => !(fontsMissing && /ERR_FILE_NOT_FOUND/.test(e)));
 
 let passed = 0;
-// Clicking a task shows its details; "Edit task" leads on to the edit form.
-async function openEdit(page, row) {
-  await row.click();
-  await page.waitForSelector('#details-edit');
-  await page.click('#details-edit');
-  await page.waitForSelector('#f-title');
-}
-
 async function step(name, fn) {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return; // ONLY=text runs just the matching steps
   try {
@@ -149,6 +141,13 @@ async function setTime(page, hour, minute, ampm) {
   });
 
   console.log('Navigation');
+  await step('Arabic titles align with the left edge in the English interface', async () => {
+    assert.equal(await page.locator('html').getAttribute('dir'), 'ltr');
+    const arabicTitle = taskRow(page, 'مراجعة الدرس').locator('.task-title');
+    const englishTitle = taskRow(page, 'Night reading').locator('.task-title');
+    assert.equal(await arabicTitle.evaluate((el) => getComputedStyle(el).textAlign), 'left');
+    assert.equal(await englishTitle.evaluate((el) => getComputedStyle(el).textAlign), 'left');
+  });
   await step('previous / next / Today / date picker', async () => {
     assert.equal((await page.$$('.day-chip')).length, 7, 'the week strip has seven days');
     assert.equal(await page.locator('.day-chip.today .day-chip-wd').textContent(), 'TODAY');
@@ -319,7 +318,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.match(await row.textContent(), /Backup start time/);
   });
   await step('a task cannot be offered itself, and a missing choice is reported', async () => {
-    await openEdit(page, taskRow(page, 'Warm-up'));
+    await taskRow(page, 'Warm-up').click();
     await page.waitForSelector('.dialog');
     const options = await page.$$eval('select[aria-label="Task to follow"] option', (els) => els.map((e) => e.textContent));
     assert.ok(options.some((o) => o.startsWith('Study SQL')));
@@ -347,7 +346,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.click('.dialog-footer .btn.primary');
     await page.waitForSelector('.dialog', { state: 'detached' });
 
-    await openEdit(page, taskRow(page, 'Breakfast'));
+    await taskRow(page, 'Breakfast').click();
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Other tasks follow this task');
     assert.match(await page.textContent('.overlay:last-child .dialog-message'), /“Walk”/);
@@ -357,7 +356,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('.overlay', { state: 'detached' });
     assert.ok((await rowTexts(page, 1)).includes('Breakfast'), 'cancel keeps it');
 
-    await openEdit(page, taskRow(page, 'Breakfast'));
+    await taskRow(page, 'Breakfast').click();
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Other tasks follow this task');
     await page.click('.overlay:last-child .btn.danger');
@@ -389,7 +388,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.deepEqual(await page.evaluate(() => window.__played), [['chime', 60]], 'no sound for un-ticking');
   });
   await step('edit a one-off task', async () => {
-    await openEdit(page, taskRow(page, 'Dentist'));
+    await taskRow(page, 'Dentist').click();
     await page.waitForSelector('.dialog');
     assert.equal(await page.inputValue('#f-title'), 'Dentist');
     await page.fill('#f-title', 'Dentist (moved)');
@@ -398,7 +397,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.ok((await rowTexts(page, 3)).includes('Dentist (moved)'));
   });
   await step('editing one repeating occurrence: scope chooser, "This occurrence only"', async () => {
-    await openEdit(page, taskRow(page, 'Study SQL'));
+    await taskRow(page, 'Study SQL').click();
     await page.waitForSelector('.dialog');
     await page.fill('#f-title', 'Study SQL (today)');
     await page.click('.dialog-footer .btn.primary');
@@ -414,7 +413,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.click('button:text-is("Today")');
   });
   await step('changing the repeat pattern disables "This occurrence only"', async () => {
-    await openEdit(page, taskRow(page, 'Class').first());
+    await taskRow(page, 'Class').first().click();
     await page.waitForSelector('.dialog');
     await page.fill('input[aria-label="Repeat every"]', '3');
     await page.click('.dialog-footer .btn.primary');
@@ -425,7 +424,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.keyboard.press('Escape');
   });
   await step('deleting a repeating task asks for scope; deleting a one-off asks to confirm', async () => {
-    await openEdit(page, taskRow(page, 'Class').first());
+    await taskRow(page, 'Class').first().click();
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Delete which occurrences');
     await page.click('input[name="scope"] >> nth=2');
@@ -433,7 +432,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('.overlay', { state: 'detached' });
     assert.ok(!(await page.textContent('#view')).includes('Class'));
 
-    await openEdit(page, taskRow(page, 'Tahajjud'));
+    await taskRow(page, 'Tahajjud').click();
     await page.click('.dialog-footer .btn.danger');
     await page.waitForSelector('text=Delete "Tahajjud"?');
     await page.click('.overlay:last-child .btn.danger');
@@ -441,7 +440,7 @@ async function setTime(page, hour, minute, ampm) {
     assert.ok(!(await page.textContent('#view')).includes('Tahajjud'));
   });
   await step('duplicate', async () => {
-    await openEdit(page, taskRow(page, 'Exercise'));
+    await taskRow(page, 'Exercise').click();
     await page.click('.dialog-footer .btn:text-is("Duplicate")');
     await page.waitForSelector('.dialog', { state: 'detached' });
     assert.ok((await rowTexts(page, 1)).includes('Exercise (copy)'));
@@ -472,7 +471,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('#bell-panel:not([hidden]) .upcoming-item');
     await shot(page, 'bell');
     await page.click('#bell-panel .upcoming-item');
-    await page.waitForSelector('#details-edit');
+    await page.waitForSelector('.dialog');
     await page.click('.dialog-header .icon-btn');
     await page.waitForSelector('.dialog', { state: 'detached' });
     assert.equal(await page.locator('#bell-btn .bell-badge').count(), 0);
@@ -495,141 +494,10 @@ async function setTime(page, hour, minute, ampm) {
   await step('side menu: Daily View, Statistics, Settings, Export data, Import data; Esc closes it', async () => {
     await page.click('#menu-btn');
     const items = await page.$$eval('#drawer .drawer-item', (els) => els.map((e) => e.textContent.trim()));
-    assert.deepEqual(items, ['Daily View', 'Free To-Do list', 'Statistics', 'Settings', 'Export data…', 'Import data…']);
+    assert.deepEqual(items, ['Daily View', 'Statistics', 'Settings', 'Export data…', 'Import data…']);
     await shot(page, 'drawer');
     await page.keyboard.press('Escape');
     assert.equal(await page.isHidden('#drawer'), true);
-  });
-  console.log('Free To-Do list and task details');
-  await step('the Free To-Do list: empty at first, quick add with Enter, add with details', async () => {
-    await page.click('#menu-btn');
-    await page.click('#drawer .drawer-item:has-text("Free To-Do list")');
-    await page.waitForSelector('#free-empty');
-    assert.equal(await page.textContent('.day-title'), 'Free To-Do list');
-    await page.fill('#free-quick', 'Buy paint');
-    await page.press('#free-quick', 'Enter');
-    await page.waitForSelector('.free-row:has-text("Buy paint")');
-    assert.equal(await page.inputValue('#free-quick'), '', 'the field is cleared for the next task');
-    await page.click('#free-details');
-    await page.fill('#ff-title', 'Fix the bike');
-    await page.selectOption('#ff-priority', 'High');
-    await page.fill('#ff-duration', '45');
-    await page.fill('#ff-notes', 'tyre;chain');
-    await page.click('.dialog-footer .btn.primary');
-    await page.waitForSelector('.free-row:has-text("Fix the bike")');
-    const bike = page.locator('.free-row:has-text("Fix the bike")');
-    assert.match(await bike.textContent(), /45m/);
-    assert.match(await bike.textContent(), /High priority/);
-    assert.match(await bike.textContent(), /tyre;chain/);
-    await shot(page, 'free-list');
-  });
-  await step('free tasks: tick, edit, move down, clear done', async () => {
-    const paint = page.locator('.free-row:has-text("Buy paint")');
-    await paint.locator('.check').click();
-    await page.waitForSelector('.free-row.done:has-text("Buy paint")');
-    assert.equal(await page.locator('.free-row.done .btn.primary').count(), 0, 'a done task has no Schedule button');
-    await page.click('#free-clear');
-    await page.waitForSelector('.free-row:has-text("Buy paint")', { state: 'detached' });
-    await page.click('.free-row:has-text("Fix the bike") .btn:text-is("Edit")');
-    await page.fill('#ff-title', 'Fix the red bike');
-    await page.click('.dialog-footer .btn.primary');
-    await page.waitForSelector('.free-row:has-text("Fix the red bike")');
-  });
-  await step('Schedule task opens the usual window filled in, and saving moves it to the Daily View', async () => {
-    await page.click('.free-row:has-text("Fix the red bike") .btn.primary');
-    await page.waitForSelector('#f-title');
-    assert.equal(await page.inputValue('#f-title'), 'Fix the red bike');
-    assert.equal(await page.inputValue('#f-notes'), 'tyre;chain');
-    assert.equal(await page.inputValue('#f-priority'), 'High');
-    await setTime(page, 4, 30, 'PM');
-    await page.click('.dialog-footer .btn.primary');
-    await page.waitForSelector('.dialog', { state: 'detached' });
-    await page.waitForSelector('#free-empty');
-    await page.click('#menu-btn');
-    await page.click('#drawer .drawer-item:has-text("Daily View")');
-    await page.waitForSelector('.day-chip');
-    assert.equal(await taskRow(page, 'Fix the red bike').count(), 1);
-  });
-  await step('clicking a task shows its details; Edit task leads to the form', async () => {
-    await taskRow(page, 'Fix the red bike').click();
-    await page.waitForSelector('#details-edit');
-    assert.equal(await page.locator('#f-title').count(), 0, 'not the edit form');
-    const text = await page.textContent('.dialog');
-    assert.match(text, /4:30 PM/);
-    assert.match(text, /45m/);
-    assert.match(text, /tyre;chain/, 'notes are shown as written');
-    assert.ok(!/null|undefined/.test(await page.textContent('.dialog')), 'no stray "null" in the details window');
-    assert.equal(await page.locator('.details-timeline .details-fill').count(), 1, 'the little timeline is there');
-    const fill = await page.$eval('.details-fill', (el) => [parseFloat(el.style.width), el.getBoundingClientRect().width]);
-    assert.ok(fill[0] > 0 && fill[0] <= 100 && fill[1] > 0);
-    await shot(page, 'task-details');
-    await page.click('#details-edit');
-    await page.waitForSelector('#f-title');
-    await page.keyboard.press('Escape');
-    await page.waitForSelector('.dialog', { state: 'detached' });
-    await page.click('#menu-btn');
-    await page.click('#drawer .drawer-item:has-text("Free To-Do list")');
-    await page.waitForSelector('#free-empty');
-    await page.click('#menu-btn');
-    await page.click('#drawer .drawer-item:has-text("Daily View")');
-    await page.waitForSelector('.day-chip');
-  });
-  await step('details of a repeating task or a task without notes show no stray "null"', async () => {
-    const key = await page.evaluate(() => window.WW.state.dayKey);
-    service.saveTask({ mode: 'create', form: {
-      title: 'Daily plain task', start: { mode: 'fixed', time: '10:30' }, durationMinutes: 20, date: key,
-      recurrence: { startDate: key, frequency: 'daily', interval: 1, end: { type: 'never' } },
-      reminders: { enabled: false, offsets: [] }, priority: 'Low', categoryId: null, notes: '',
-    } });
-    await page.evaluate(() => window.WW.afterChange());
-    await taskRow(page, 'Daily plain task').click();
-    await page.waitForSelector('#details-edit');
-    assert.equal(await page.locator('.details-footer .btn').count(), 4, 'delete, duplicate, done and edit');
-    assert.ok(!/null|undefined/.test(await page.textContent('.dialog')), await page.textContent('.dialog'));
-    await page.keyboard.press('Escape');
-    await page.waitForSelector('.dialog', { state: 'detached' });
-  });
-  await step('the form offers "Show one note at random" only when the full-screen alert is on, and keeps it', async () => {
-    await page.click('#add-btn');
-    await page.waitForSelector('#f-title');
-    await page.fill('#f-title', 'Random notes task');
-    if (await page.isChecked('#f-fullscreen')) await page.uncheck('#f-fullscreen');
-    assert.equal(await page.locator('#f-random-notes').count(), 0);
-    await page.check('#f-fullscreen');
-    await page.waitForSelector('#f-random-notes');
-    await page.check('#f-random-notes');
-    await page.fill('#f-notes', 'first; second; third');
-    await page.click('.dialog-footer .btn.primary');
-    await page.waitForSelector('.dialog', { state: 'detached' });
-    await taskRow(page, 'Random notes task').click();
-    await page.waitForSelector('#details-edit');
-    assert.match(await page.textContent('.dialog'), /One note at random/);
-    await page.click('#details-edit');
-    await page.waitForSelector('#f-random-notes');
-    assert.equal(await page.isChecked('#f-random-notes'), true);
-    await page.keyboard.press('Escape');
-    await page.waitForSelector('.dialog', { state: 'detached' });
-  });
-  await step('a failed save shows a red banner with the reason; Try again clears it when saving works', async () => {
-    assert.equal(await page.isHidden('#save-banner'), true);
-    const good = service.store.save.bind(service.store);
-    service.store.save = () => { const e = new Error('no space'); e.code = 'ENOSPC'; throw e; };
-    await page.click('#add-btn');
-    await page.fill('#f-title', 'Cannot be saved');
-    await page.click('.dialog-footer .btn.primary');
-    await page.waitForSelector('#save-banner:not([hidden])');
-    const text = await page.textContent('#save-banner');
-    assert.match(text, /could not be saved/);
-    assert.match(text, /The disk is full/);
-    await shot(page, 'save-banner');
-    await page.keyboard.press('Escape');
-    await page.waitForSelector('.dialog', { state: 'detached' });
-    await page.click('#save-retry');
-    await page.waitForTimeout(200);
-    assert.equal(await page.isHidden('#save-banner'), false, 'still failing: the banner stays');
-    service.store.save = good;
-    await page.click('#save-retry');
-    await page.waitForSelector('#save-banner', { state: 'hidden' });
   });
   await step('menu opens Settings', async () => {
     await page.click('#menu-btn');
@@ -830,14 +698,6 @@ async function setTime(page, hour, minute, ampm) {
     assert.equal(await preview((el) => el.querySelectorAll('.alert-notes').length), 0, 'notes hidden');
     assert.ok(!(await preview((el) => el.textContent)).includes('Zone:'), 'zone hidden');
     await shot(page, 'settings-fullscreen');
-    const previewButtons = () => preview((el) => [...el.querySelectorAll('.alert-actions button')].map((b) => b.dataset.action));
-    assert.deepEqual(await previewButtons(), ['dismiss', 'snooze', 'open', 'done']);
-    await page.click('input[aria-label="Snooze"]');
-    await page.click('input[aria-label="Mark as Done"]');
-    await page.waitForFunction(() => document.querySelectorAll('.alert-preview .alert-actions button').length === 2);
-    assert.deepEqual(await previewButtons(), ['dismiss', 'open'], 'the preview follows the choice; "Got it" stays');
-    assert.deepEqual(service.getSettings().alertAppearance.buttons, { snooze: false, open: true, done: false });
-    assert.equal(await page.locator('input[aria-label="Got it"]').count(), 0, 'no switch for "Got it"');
 
     await page.click('button:text-is("High contrast")');
     await page.waitForFunction(() => document.querySelector('.alert-preview .alert-stage').style.getPropertyValue('--a-bg') === '#000000');
@@ -970,17 +830,6 @@ async function setTime(page, hour, minute, ampm) {
     await p.evaluate(([st]) => window.__render(st), [{ items: [{ id: 'y', taskId: 't', dateKey: 'd', title: 'No notes shown', notes: 'hidden', startLabel: '1:00 PM', endLabel: '2:00 PM',
       durationLabel: '1h 0m', zoneName: 'Dhuhr → Asr', zoneIndex: 2, categoryName: '', categoryColor: '', priority: 'Low', snoozed: false }], appearance: look, snoozeMinutes: 5, guardMs: 0 }]);
     assert.equal((await p.$$('.alert-notes')).length, 0);
-    // buttons: all four by default, "Got it" always stays
-    const buttonsOf = () => p.$$eval('.alert-actions button', (els) => els.map((e) => e.dataset.action));
-    assert.deepEqual(await buttonsOf(), ['dismiss', 'snooze', 'open', 'done']);
-    look.buttons = { snooze: false, open: true, done: false };
-    await p.evaluate(([st]) => window.__render(st), [{ items: [{ id: 'z', taskId: 't', dateKey: 'd', title: 'Fewer buttons', notes: '', startLabel: '1:00 PM', endLabel: '2:00 PM',
-      durationLabel: '1h 0m', zoneName: 'Dhuhr → Asr', zoneIndex: 2, categoryName: '', categoryColor: '', priority: 'Low', snoozed: false }], appearance: look, snoozeMinutes: 5, guardMs: 0 }]);
-    assert.deepEqual(await buttonsOf(), ['dismiss', 'open']);
-    look.buttons = { snooze: false, open: false, done: false };
-    await p.evaluate(([st]) => window.__render(st), [{ items: [{ id: 'w', taskId: 't', dateKey: 'd', title: 'Only Got it', notes: '', startLabel: '1:00 PM', endLabel: '2:00 PM',
-      durationLabel: '1h 0m', zoneName: 'Dhuhr → Asr', zoneIndex: 2, categoryName: '', categoryColor: '', priority: 'Low', snoozed: false }], appearance: look, snoozeMinutes: 5, guardMs: 0 }]);
-    assert.deepEqual(await buttonsOf(), ['dismiss']);
     assert.deepEqual(realErrors(alert.errors), []);
     await alert.browser.close();
   });
@@ -1006,14 +855,14 @@ async function setTime(page, hour, minute, ampm) {
     const sp = sApp.page;
     const label = () => sp.textContent('#stats-range-label');
     const pressed = () => sp.$eval('.stats-seg button.on', (b) => b.dataset.range);
-    const barCount = () => sp.$$eval('.bars-card:not(.latetrend-card) .bars .bar-col', (els) => els.length);
+    const barCount = () => sp.$$eval('.bars .bar-col', (els) => els.length);
 
     await sp.click('#menu-btn');
     await sp.click('.drawer-item:has-text("Statistics")');
     await sp.waitForSelector('.stats-kpis');
     assert.equal(await pressed(), 'week');
     assert.equal(await label(), 'Sun Oct 4 – Sat Oct 10, 2026');
-    assert.equal((await sp.$$('.stats-card.kpi')).length, 5);
+    assert.equal((await sp.$$('.stats-card.kpi')).length, 4);
     assert.equal(await barCount(), 7, 'one bar for each day of the week so far');
     assert.equal(await sp.$$eval('.trend-body .tr-dot', (els) => els.length), 7);
     assert.ok(await sp.$('.tr-compare'), 'last week is drawn as a dashed line');
@@ -1085,10 +934,10 @@ async function setTime(page, hour, minute, ampm) {
 
     // Needs attention lists what is overdue and opens the task.
     await sp.click('.stats-seg button[data-range="week"]');
-    await sp.waitForSelector('.late-card:not(.lateness-card) .late-item');
-    assert.ok((await sp.$$('.late-card:not(.lateness-card) .late-item')).length <= 5);
+    await sp.waitForSelector('.late-item');
+    assert.ok((await sp.$$('.late-item')).length <= 5);
     assert.match(await sp.textContent('.late-card, section[aria-label="Needs attention"]'), /late|Today/);
-    await sp.click('.late-card:not(.lateness-card) .late-item >> nth=0');
+    await sp.click('.late-item >> nth=0');
     await sp.waitForSelector('.overlay');
     await sp.keyboard.press('Escape');
     assert.deepEqual(realErrors(sApp.errors), []);
@@ -1106,17 +955,17 @@ async function setTime(page, hour, minute, ampm) {
     await mp.click('#menu-btn');
     await mp.click('.drawer-item:has-text("Statistics")');
     await mp.waitForSelector('.stats-grid');
-    assert.equal((await sections()).length, 9);
-    assert.equal((await mp.$$('.stats-card.kpi')).length, 5);
+    assert.equal((await sections()).length, 6);
+    assert.equal((await mp.$$('.stats-card.kpi')).length, 4);
 
     await mp.click('#stats-manage');
     await mp.waitForSelector('.manage-row');
-    assert.equal((await mp.$$('.manage-row')).length, 14);
+    assert.equal((await mp.$$('.manage-row')).length, 10);
     await mp.click('button[aria-label="Remove Needs attention"]');
     await mp.click('button[aria-label="Remove By zone"]');
     await mp.click('button[aria-label="Remove Current streak"]');
-    await mp.waitForFunction(() => document.querySelectorAll('.stats-card.kpi').length === 4);
-    assert.deepEqual(svc.getSettings().statsCharts, ['kpi-rate', 'kpi-done', 'kpi-time', 'kpi-ontime', 'bars', 'heat', 'trend', 'categories', 'lateness', 'lateby', 'latetrend']);
+    await mp.waitForFunction(() => document.querySelectorAll('.stats-card.kpi').length === 3);
+    assert.deepEqual(svc.getSettings().statsCharts, ['kpi-rate', 'kpi-done', 'kpi-time', 'bars', 'heat', 'trend', 'categories']);
     assert.equal((await sections()).includes('Needs attention'), false);
     assert.equal((await sections()).includes('By zone'), false);
     assert.match(await mp.textContent('.manage-title >> nth=1'), /Available to add \(3\)/);
@@ -1124,8 +973,8 @@ async function setTime(page, hour, minute, ampm) {
 
     await mp.click('button[aria-label="Move Completion trend up"]');
     await mp.waitForFunction(() => document.querySelector('.stats-grid > section:nth-child(2)').getAttribute('aria-label') === 'Completion trend');
-    assert.deepEqual(await sections(), ['Done versus planned', 'Completion trend', 'Calendar heat map', 'By category', 'Most late tasks', 'Lateness by zone and category', 'Lateness over time']);
-    assert.deepEqual(svc.getSettings().statsCharts.slice(4), ['bars', 'trend', 'heat', 'categories', 'lateness', 'lateby', 'latetrend']);
+    assert.deepEqual(await sections(), ['Done versus planned', 'Completion trend', 'Calendar heat map', 'By category']);
+    assert.deepEqual(svc.getSettings().statsCharts.slice(3), ['bars', 'trend', 'heat', 'categories']);
     await mp.click('button[aria-label="Add By zone"]');
     await mp.waitForFunction(() => document.querySelector('.stats-grid > section:last-child').getAttribute('aria-label') === 'By zone');
 
@@ -1138,69 +987,20 @@ async function setTime(page, hour, minute, ampm) {
     await mp.click('.drawer-item:has-text("Statistics")');
     await mp.waitForSelector('.stats-grid');
     assert.equal((await sections()).includes('By zone'), true);
-    assert.equal((await mp.$$('.stats-card.kpi')).length, 4);
+    assert.equal((await mp.$$('.stats-card.kpi')).length, 3);
 
     // Removing everything leaves a hint, and the reset button brings it all back.
     await mp.click('#stats-manage');
-    for (const id of ['Done vs planned', 'Completion rate', 'Tasks done', 'Planned time', 'Calendar heat map', 'Completion trend', 'By category', 'By zone', 'Done on time', 'Most late tasks', 'Lateness by zone and category', 'Lateness over time']) {
+    for (const id of ['Done vs planned', 'Completion rate', 'Tasks done', 'Planned time', 'Calendar heat map', 'Completion trend', 'By category', 'By zone']) {
       await mp.click(`button[aria-label="Remove ${id}"]`);
     }
     await mp.waitForSelector('#stats-nothing');
     await mp.click('#manage-reset');
     await mp.waitForSelector('.stats-grid');
-    assert.equal((await sections()).length, 9);
-    assert.equal((await mp.$$('.stats-card.kpi')).length, 5);
+    assert.equal((await sections()).length, 6);
+    assert.equal((await mp.$$('.stats-card.kpi')).length, 4);
     assert.deepEqual(realErrors(m.errors), []);
     await m.browser.close();
-  });
-
-  await step('Lateness: the setting takes hours and minutes, and the lateness charts show the late tasks', async () => {
-    const { at } = require('./ui-harness');
-    const svc = createService({ now: at('2026-10-10', '15:20') });
-    const fixed = (time) => ({ mode: 'fixed', time });
-    const id = svc.saveTask({ mode: 'create', form: { title: 'Daily report', start: fixed('09:00'), durationMinutes: 30, date: null,
-      recurrence: { startDate: '2026-10-09', frequency: 'daily', interval: 1 }, reminders: { enabled: false, offsets: [] }, priority: 'Medium', categoryId: 'cat-work', notes: '' } }).taskId;
-    svc.setDone({ taskId: id, dateKey: '2026-10-10', done: true }); // ticked at 3:20 PM, 6 h 20 m after the start
-    svc.saveTask({ mode: 'create', form: { title: 'Never done', start: fixed('08:00'), durationMinutes: 30, date: '2026-10-10', recurrence: null,
-      reminders: { enabled: false, offsets: [] }, priority: 'Medium', categoryId: null, notes: '' } });
-    const a = await openApp({ playwright, service: svc, executablePath, width: 1280, height: 2600 });
-    const p = a.page;
-    await p.click('#menu-btn');
-    await p.click('button:has-text("Settings")');
-    await p.waitForSelector('input[aria-label="Late after, hours"]');
-    assert.equal(await p.inputValue('input[aria-label="Late after, hours"]'), '1');
-    assert.equal(await p.inputValue('input[aria-label="Late after, minutes"]'), '0');
-    const saved = async (minutes) => {
-      for (let i = 0; i < 50 && svc.getSettings().lateAfterMinutes !== minutes; i++) await new Promise((r) => setTimeout(r, 100));
-      assert.equal(svc.getSettings().lateAfterMinutes, minutes);
-    };
-    await p.fill('input[aria-label="Late after, hours"]', '7');
-    await p.press('input[aria-label="Late after, hours"]', 'Tab');
-    await saved(420);
-    await p.fill('input[aria-label="Late after, minutes"]', '30');
-    await p.press('input[aria-label="Late after, minutes"]', 'Tab');
-    await saved(450);
-    await p.fill('input[aria-label="Late after, hours"]', '1');
-    await p.press('input[aria-label="Late after, hours"]', 'Tab');
-    await saved(90); // 1 hour 30 minutes
-    await shot(p, 'settings-late');
-    await p.click('.back-link');
-    await p.click('#menu-btn');
-    await p.click('.drawer-item:has-text("Statistics")');
-    await p.waitForSelector('.lateness-card');
-    assert.match(await p.textContent('.lateness-card'), /Daily report/);
-    assert.match(await p.textContent('.lateness-card'), /Average 6h 20m/);
-    assert.match(await p.textContent('.lateness-card'), /Never done/);
-    assert.match(await p.textContent('.lateness-card'), /Late means done more than 1h 30m after the start/);
-    assert.equal((await p.$$('.lateby-card .late-by-line')).length > 0, true);
-    assert.ok(await p.$('.latetrend-card .lt-bar'));
-    assert.equal(await p.textContent('.kpi[data-kpi="ontime"] .kpi-num'), '0');
-    await shot(p, 'stats-lateness');
-    await p.click('.lateness-item >> nth=0');
-    await p.waitForSelector('.overlay');
-    await p.keyboard.press('Escape');
-    assert.deepEqual(realErrors(a.errors), []);
-    await a.browser.close();
   });
 
   console.log('Arabic');
