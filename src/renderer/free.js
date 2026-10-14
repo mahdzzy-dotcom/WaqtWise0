@@ -174,7 +174,9 @@
       WW.toast(error.message, 'error');
       return;
     }
-    const dlg = WW.openDialog({ title: d.title });
+    const dlg = WW.openDialog({ title: d.title, wide: true });
+    dlg.footer.classList.add('details-footer');
+    dlg.box.classList.add('details-dialog');
     const row = (label, value) => (value ? [h('div', { class: 'details-label', text: label }), h('div', { class: 'details-value' }, value)] : []);
     // Each time is kept as one piece, so the range keeps its order when the screen reads right to left.
     const timeRange = h('span', {}, h('bdi', { dir: 'ltr', text: d.startLabel }), ' – ', h('bdi', { dir: 'ltr', text: d.endLabel }), d.endsNextDay ? ` (${T('next day')})` : '');
@@ -233,18 +235,6 @@
         WW.toast(T('Task duplicated'));
         after();
       }) }),
-      d.canReturnToFree ? h('button', { class: 'btn', type: 'button', id: 'details-free', text: T('Move to free list'), onclick: () => guard(async () => {
-        const go = await WW.ask({
-          title: T('Move to free list'), message: T('“{title}” will lose its time and leave the five zones. You can schedule it again later from the Free To-Do list.', { title: d.title }),
-          choices: [{ label: T('Cancel'), value: false }, { label: T('Move to free list'), value: true, kind: 'primary' }],
-        });
-        if (!go) return;
-        await WW.call('unscheduleTask', { taskId, dateKey });
-        WW.toast(T('Moved to the free list'));
-        if (WW.refreshFreeCount) WW.refreshFreeCount();
-        after();
-      }) }) : null,
-      h('span', { class: 'spacer' }),
       h('button', { class: 'btn', type: 'button', id: 'details-done', text: d.done ? T('Mark as not done') : T('Mark as Done'), onclick: () => guard(async () => {
         await WW.call('setDone', { taskId, dateKey, done: !d.done });
         if (!d.done && WW.state.settings) WW.sounds.play(WW.state.settings.doneSound, WW.state.settings.doneSoundVolume);

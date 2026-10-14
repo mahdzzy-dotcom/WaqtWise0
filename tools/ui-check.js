@@ -550,7 +550,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('.day-chip');
     assert.equal(await taskRow(page, 'Fix the red bike').count(), 1);
   });
-  await step('clicking a task shows its details; Edit task leads to the form; Move to free list brings it back', async () => {
+  await step('clicking a task shows its details; Edit task leads to the form', async () => {
     await taskRow(page, 'Fix the red bike').click();
     await page.waitForSelector('#details-edit');
     assert.equal(await page.locator('#f-title').count(), 0, 'not the edit form');
@@ -567,18 +567,8 @@ async function setTime(page, hour, minute, ampm) {
     await page.waitForSelector('#f-title');
     await page.keyboard.press('Escape');
     await page.waitForSelector('.dialog', { state: 'detached' });
-    await taskRow(page, 'Fix the red bike').click();
-    await page.waitForSelector('#details-free');
-    await page.click('#details-free');
-    await page.locator('.dialog-footer .btn.primary').last().click();
-    await page.waitForSelector('.dialog', { state: 'detached' });
-    await page.waitForFunction(() => !document.body.textContent.includes('Fix the red bike'));
     await page.click('#menu-btn');
-    assert.match(await page.textContent('#drawer .drawer-item:has-text("Free To-Do list")'), /\(1\)/);
     await page.click('#drawer .drawer-item:has-text("Free To-Do list")');
-    await page.waitForSelector('.free-row:has-text("Fix the red bike")');
-    await page.click('.free-row:has-text("Fix the red bike") .btn.danger');
-    await page.locator('.dialog-footer .btn.danger').last().click();
     await page.waitForSelector('#free-empty');
     await page.click('#menu-btn');
     await page.click('#drawer .drawer-item:has-text("Daily View")');
@@ -594,7 +584,7 @@ async function setTime(page, hour, minute, ampm) {
     await page.evaluate(() => window.WW.afterChange());
     await taskRow(page, 'Daily plain task').click();
     await page.waitForSelector('#details-edit');
-    assert.equal(await page.locator('#details-free').count(), 0, 'a repeating task cannot go back to the free list');
+    assert.equal(await page.locator('.details-footer .btn').count(), 4, 'delete, duplicate, done and edit');
     assert.ok(!/null|undefined/.test(await page.textContent('.dialog')), await page.textContent('.dialog'));
     await page.keyboard.press('Escape');
     await page.waitForSelector('.dialog', { state: 'detached' });

@@ -72,7 +72,7 @@ In the task form, with the full-screen alert on, **Show one note at random** is 
 
 ## Free task
 
-The Free To-Do list holds tasks that have no time yet. It has no reminders, no zone and no statistics. When a free task is scheduled it becomes a normal task and leaves the list; "Move to free list" does the reverse for a task that does not repeat. A file without `freeTasks` (made by an older version) loads with an empty list.
+The Free To-Do list holds tasks that have no time yet. It has no reminders, no zone and no statistics. When a free task is scheduled it becomes a normal task and leaves the list. A file without `freeTasks` (made by an older version) loads with an empty list.
 
 ```json
 { "id": "…", "title": "Renew ID", "notes": "", "priority": "Low|Medium|High", "categoryId": null,

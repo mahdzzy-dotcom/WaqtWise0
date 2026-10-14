@@ -643,3 +643,9 @@ input.onoff:checked ~ .onoff-state { color: var(--accent); }
 .details-fill { position: absolute; top: 0; bottom: 0; background: var(--zf); border-radius: 99px; }
 .details-bar-labels { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--text-soft); }
 .details-more { font-style: italic; }
+
+/* The buttons of the details window sit in one row, all the same width (they wrap on a narrow window). */
+.dialog-footer.details-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); justify-content: stretch; }
+.details-footer .btn { width: 100%; }
+.dialog.details-dialog { max-width: 860px; }
+.details-footer .btn { white-space: nowrap; }

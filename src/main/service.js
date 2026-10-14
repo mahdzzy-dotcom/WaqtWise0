@@ -201,7 +201,7 @@ const PUBLIC_METHODS = [
   'bootstrap', 'getDay', 'getStats', 'getUpcoming', 'getMissed', 'dismissMissed', 'clearMissed', 'newTaskDefaults', 'getTaskForEdit', 'previewForm', 'saveTask',
   'getReferenceChoices', 'getDeleteImpact', 'getAlertPreset', 'deleteTask', 'setDone', 'duplicateTask', 'getSettings', 'saveSettings', 'addCategory', 'updateCategory',
   'deleteCategory', 'listBackups', 'restoreBackup', 'getCityInfo',
-  'getFreeTasks', 'getFreeTaskCount', 'saveFreeTask', 'deleteFreeTask', 'setFreeDone', 'clearFreeDone', 'moveFreeTask', 'getFreeTaskForSchedule', 'unscheduleTask', 'getTaskDetails', 'getSaveStatus', 'retrySave',
+  'getFreeTasks', 'getFreeTaskCount', 'saveFreeTask', 'deleteFreeTask', 'setFreeDone', 'clearFreeDone', 'moveFreeTask', 'getFreeTaskForSchedule', 'getTaskDetails', 'getSaveStatus', 'retrySave',
 ];
 
 module.exports = { PlannerService, PUBLIC_METHODS, defaultProviderFactory };

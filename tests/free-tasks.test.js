@@ -84,25 +84,6 @@ test('Scheduling that fails keeps the free task', () => {
   assert.equal(s.getFreeTasks().length, 1);
 });
 
-test('A one-time task can go back to the free list; a repeating one cannot', () => {
-  const s = make();
-  const { taskId } = s.saveTask({ mode: 'create', form: scheduleForm({ title: 'Once', notes: 'n', priority: 'Low' }) });
-  s.setDone({ taskId, dateKey: DAY, done: true });
-  s.unscheduleTask({ taskId, dateKey: DAY });
-  assert.equal(s.getTasks().length, 0);
-  const [item] = s.getFreeTasks();
-  assert.equal(item.title, 'Once');
-  assert.equal(item.notes, 'n');
-  assert.equal(item.priority, 'Low');
-  assert.equal(item.durationMinutes, 30);
-  assert.equal(item.done, true);
-
-  const rec = s.saveTask({ mode: 'create', form: scheduleForm({ title: 'Daily', date: null, recurrence: { startDate: DAY, frequency: 'daily', interval: 1, end: { type: 'never' } } }) }).taskId;
-  assert.throws(() => s.unscheduleTask({ taskId: rec, dateKey: DAY }), /does not repeat/);
-  assert.equal(s.getTasks().length, 1);
-  assert.equal(s.getFreeTasks().length, 1);
-});
-
 test('Task details: time, zone, repeat summary, reminders', () => {
   const s = make();
   const once = s.saveTask({ mode: 'create', form: scheduleForm({ title: 'Report', notes: 'a;b', priority: 'High', reminders: { enabled: true, offsets: [10], fullScreen: true } }) }).taskId;
@@ -110,7 +91,6 @@ test('Task details: time, zone, repeat summary, reminders', () => {
   assert.equal(d.title, 'Report');
   assert.equal(d.notes, 'a;b', 'the notes are shown exactly as written');
   assert.match(d.startLabel, /8:00/);
-  assert.equal(d.canReturnToFree, true);
   assert.equal(d.isRecurring, false);
   assert.deepEqual(d.reminderOffsets, [10]);
   assert.equal(d.fullScreen, true);
@@ -120,7 +100,6 @@ test('Task details: time, zone, repeat summary, reminders', () => {
   assert.equal(typeof d.continuesPastZone, 'boolean');
   const rec = s.saveTask({ mode: 'create', form: scheduleForm({ date: null, recurrence: { startDate: DAY, frequency: 'daily', interval: 1, end: { type: 'never' } } }) }).taskId;
   const r = s.getTaskDetails({ taskId: rec, dateKey: DAY });
-  assert.equal(r.canReturnToFree, false);
   assert.ok(r.repeatSummary.length > 0);
   assert.throws(() => s.getTaskDetails({ taskId: 'nope', dateKey: DAY }));
 });
@@ -148,7 +127,7 @@ test('Free tasks travel with export, import and backups; damaged ones are skippe
 });
 
 test('The window may call the new methods', () => {
-  for (const name of ['getFreeTasks', 'getFreeTaskCount', 'saveFreeTask', 'deleteFreeTask', 'setFreeDone', 'clearFreeDone', 'moveFreeTask', 'getFreeTaskForSchedule', 'unscheduleTask', 'getTaskDetails']) {
+  for (const name of ['getFreeTasks', 'getFreeTaskCount', 'saveFreeTask', 'deleteFreeTask', 'setFreeDone', 'clearFreeDone', 'moveFreeTask', 'getFreeTaskForSchedule', 'getTaskDetails']) {
     assert.ok(PUBLIC_METHODS.includes(name), name);
     assert.equal(typeof PlannerService.prototype[name], 'function', name);
   }

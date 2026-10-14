@@ -35,7 +35,7 @@ or all of them.
 
 ### Tasks with no time yet (Free To-Do list)
 
-Open the menu and choose **Free To-Do list**. Type a task and press Enter (or use "Add with details"). When you decide the time, press **Schedule task**: the usual window opens with the title and notes filled in; choose the time and repeat, and Save. The task moves into the five zones. To put a one-time task back, click it in the Daily View and choose **Move to free list**.
+Open the menu and choose **Free To-Do list**. Type a task and press Enter (or use "Add with details"). When you decide the time, press **Schedule task**: the usual window opens with the title and notes filled in; choose the time and repeat, and Save. The task moves into the five zones.
 
 Clicking a task (in the Daily View, the bell, the missed reminders or Statistics) shows its details. Use **Edit task** to change it.
 

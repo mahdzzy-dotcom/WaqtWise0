@@ -104,34 +104,6 @@ class FreeTaskMethods {
     return { fromFreeTaskId: id, form };
   }
 
-  // Takes a one-time task off the schedule and puts it back in the free list (without its time).
-  unscheduleTask({ taskId, dateKey: key }) {
-    const task = this.findTask(taskId);
-    if (task.recurrence) throw new Error(t('Only a task that does not repeat can go back to the free list.'));
-    const list = this.data.freeTasks || (this.data.freeTasks = []);
-    if (list.length >= MAX_FREE_TASKS) throw new Error(t('The free list is full (at most {max} tasks)', { max: MAX_FREE_TASKS }));
-    const { task: item, error } = normalizeFreeTask({
-      id: this.newId(),
-      title: task.title,
-      notes: task.notes,
-      priority: task.priority,
-      categoryId: task.categoryId,
-      durationMinutes: task.durationMinutes,
-      done: Boolean(task.completions && task.completions[task.date]),
-    }, this.now());
-    if (error) throw new Error(error);
-    list.push(item);
-    // The same removal as "Delete": tasks that followed it keep the times they have now.
-    let result;
-    try {
-      result = this.deleteTask({ taskId, dateKey: key || task.date, scope: 'all' });
-    } catch (error) {
-      this.data.freeTasks = this.data.freeTasks.filter((x) => x.id !== item.id);
-      throw error;
-    }
-    return { ok: true, id: item.id, frozen: result.frozen };
-  }
-
   // Everything the details window shows for one occurrence of a task.
   getTaskDetails({ taskId, dateKey: key }) {
     const task = this.findTask(taskId);
@@ -170,7 +142,6 @@ class FreeTaskMethods {
       fullScreen: Boolean(o.reminders && o.reminders.fullScreen),
       randomNotes: Boolean(o.reminders && o.reminders.fullScreen && o.reminders.randomNotes),
       followsTitle: this.followsTitle(o.startDefinition),
-      canReturnToFree: !task.recurrence,
     };
   }
 }
