@@ -44,6 +44,6 @@
 .alert-more { position: absolute; bottom: 4cqh; left: 0; right: 0; font-size: 2.4cqmin; opacity: 0.85; text-align: center; }
 .alert-guard { position: absolute; top: 3cqh; left: 0; right: 0; text-align: center; font-size: 2cqmin; opacity: 0.6; }
 
-/* The preview in Settings: the real thing, drawn 1280 x 720 and scaled down to fit. */
+/* The preview in Settings: the real thing, drawn 1280 x 720 and scaled down to fit */
 .alert-preview { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; overflow: hidden; contain: layout paint; isolation: isolate; border-radius: 10px; border: 1px solid var(--border); }
 .alert-preview .alert-frame { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; max-width: none; transform-origin: top left; pointer-events: none; contain: strict; }

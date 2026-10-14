@@ -84,6 +84,23 @@ class MissedAlertMethods {
 
   // ---- the full-screen alert ----------------------------------------------------------------------------------
 
+  // One of a task's several notes (separated by ;), chosen at random without repeating until all were shown. A snoozed alert comes back with a different note.
+  pickAlertNote(item) {
+    const rotation = this.data.noteRotation || (this.data.noteRotation = {});
+    const { note, record } = core.pickNote(item.notes, rotation[item.taskId], item.dateKey, this.random, Boolean(item.snoozed));
+    const before = JSON.stringify(rotation[item.taskId] || null);
+    if (record) rotation[item.taskId] = record;
+    else delete rotation[item.taskId];
+    if (JSON.stringify(record) !== before) {
+      try {
+        this.persist();
+      } catch (error) {
+        // not being able to remember the choice must never stop the alert from showing
+      }
+    }
+    return note;
+  }
+
   // What the alert window shows for each task starting now (plain text and numbers only).
   buildAlertItems(items) {
     return items.map((i) => {
@@ -93,7 +110,7 @@ class MissedAlertMethods {
         taskId: i.taskId,
         dateKey: i.dateKey,
         title: i.title,
-        notes: i.notes || '',
+        notes: i.randomNotes ? this.pickAlertNote(i) : i.notes || '',
         startMs: new Date(i.start).getTime(),
         startLabel: formatTime12(i.start),
         endLabel: formatTime12(i.end),

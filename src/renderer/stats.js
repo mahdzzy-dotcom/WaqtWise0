@@ -21,12 +21,16 @@
     ['kpi-done', T('Tasks done'), T('How many tasks were done, out of how many')],
     ['kpi-streak', T('Current streak'), T('Days in a row with at least 70% done')],
     ['kpi-time', T('Planned time'), T('Total time of the counted tasks')],
+    ['kpi-ontime', T('Done on time'), T('Share of done tasks that were not late')],
     ['bars', T('Done vs planned'), T('Bars of done and planned tasks')],
     ['zones', T('By zone'), T('Share done in each of the 5 zones')],
     ['heat', T('Calendar heat map'), T('Every day of the month or year as a colour')],
     ['trend', T('Completion trend'), T('How the completion rate moves over time')],
     ['categories', T('By category'), T('Share done and planned time per category')],
     ['late', T('Needs attention'), T('Tasks not done and already past their time')],
+    ['lateness', T('Most late tasks'), T('Which tasks are done late, and by how much on average')],
+    ['lateby', T('Lateness by zone and category'), T('Average delay in each zone and category')],
+    ['latetrend', T('Lateness over time'), T('Average delay in each day, week or month')],
   ];
   const CHARTS = { map: (f) => CHARTS_DEF().map(f), find: (f) => CHARTS_DEF().find(f) };
   const local = { query: { range: 'week' }, showAllLate: false };
@@ -247,8 +251,8 @@
     const shown = local.showAllLate ? late.items : late.items.slice(0, LATE_SHOWN);
     const list = h('div', { class: 'late-list' }, shown.map((t) =>
       h('div', { class: 'late-item', role: 'button', tabindex: '0', 'data-task': t.taskId,
-        onclick: () => WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }),
-        onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskForm({ mode: 'edit', taskId: t.taskId, dateKey: t.dateKey }); } },
+        onclick: () => WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }),
+        onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }); } },
       h('div', { class: 'late-main' }, h('div', { class: 'late-title', text: t.title }), h('div', { class: 'late-when', text: `${t.whenLabel} · ${t.zoneName}` })),
       h('span', { class: 'late-age', text: t.ageLabel }))));
     const more = late.total > LATE_SHOWN
@@ -261,6 +265,79 @@
       late.total === 0 ? h('div', { class: 'stats-none', id: 'late-none', text: T('Nothing overdue in this range.') }) : list, more);
   }
 
+  // ---- lateness ---------------------------------------------------------------------------------------------------
+
+  function noTiming(id) {
+    return h('div', { class: 'stats-none', id, text: T('No timing data in this range yet. It is recorded when you tick a task as done.') });
+  }
+
+  function latenessCard(data) {
+    const l = data.lateness;
+    const note = l.unknown > 0 ? TP(l.unknown, '{n} done task without a recorded time is not counted.', '{n} done tasks without a recorded time are not counted.') : '';
+    const list = h('div', { class: 'late-list lateness-list' }, l.items.map((t) =>
+      h('div', { class: 'late-item lateness-item', role: 'button', tabindex: '0', 'data-task': t.taskId,
+        onclick: () => WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }),
+        onkeydown: (e) => { if (e.key === 'Enter') WW.openTaskDetails({ taskId: t.taskId, dateKey: t.dateKey }); } },
+      h('div', { class: 'late-main' }, h('div', { class: 'late-title', text: t.title }),
+        h('div', { class: 'late-when', text: [
+          t.n ? T('Late {late} of {n}', { late: t.late, n: t.n }) : '',
+          t.n ? T('Longest: {time}', { time: t.maxLabel }) : '',
+          t.missed ? TP(t.missed, 'Not done {n} time', 'Not done {n} times') : '',
+        ].filter(Boolean).join(' · ') })),
+      h('span', { class: 'late-age', text: t.avg === null ? '–' : T('Average {time}', { time: t.avgLabel }) }))));
+    return h('section', { class: 'stats-card late-card lateness-card', 'aria-label': T('Most late tasks') },
+      h('h2', { text: T('Most late tasks') }),
+      h('div', { class: 'sub', text: T('Late means done more than {time} after the start. Change this in Settings.', { time: l.thresholdLabel }) }),
+      l.measured === 0 && l.total === 0 ? noTiming('lateness-none')
+        : l.total === 0 ? h('div', { class: 'stats-none', id: 'lateness-clear', text: T('Nothing was late in this range.') }) : list,
+      note ? h('div', { class: 'row-note', text: note }) : null);
+  }
+
+  function delayLine(row, max, color) {
+    const none = row.avg === null;
+    return h('div', { class: 'cat-line late-by-line', 'data-n': String(row.n) },
+      h('span', { class: 'cat-dot', style: { background: color || 'var(--accent)' } }),
+      h('span', { class: 'cat-name', text: row.name }),
+      h('div', { class: 'meter' }, h('div', { style: { width: `${none ? 0 : Math.max(2, Math.round((row.avg / max) * 100))}%`, background: color || 'var(--accent)' } })),
+      h('span', { class: 'cat-pct', text: row.avgLabel }),
+      h('span', { class: 'cat-time', text: none ? '' : T('{late} of {n} late', { late: row.late, n: row.n }) }));
+  }
+
+  function latebyCard(data) {
+    const b = data.lateBy;
+    const any = b.zones.some((z) => z.n > 0);
+    return h('section', { class: 'stats-card cat-card lateby-card', 'aria-label': T('Lateness by zone and category') },
+      h('h2', { text: T('Lateness by zone and category') }), h('div', { class: 'sub', text: T('Average time from the start until the task was ticked') }),
+      !any ? noTiming('lateby-none') : h('div', {},
+        h('div', { class: 'lateby-head', text: T('By zone') }),
+        h('div', { class: 'bars-list cats' }, b.zones.map((z) => delayLine(z, b.maxAvg, null))),
+        h('div', { class: 'lateby-head', text: T('By category') }),
+        h('div', { class: 'bars-list cats' }, b.categories.map((c) => delayLine(c, b.maxAvg, c.color)))));
+  }
+
+  function latetrendCard(data) {
+    const t = data.lateTrend;
+    const many = t.items.length > 14;
+    const stride = t.items.length > 12 ? Math.ceil(t.items.length / 10) : 1;
+    const detailed = t.items.length <= 12;
+    return h('section', { class: 'stats-card bars-card latetrend-card', 'aria-label': T('Lateness over time') },
+      h('div', { class: 'stats-card-head' }, h('div', {}, h('h2', { text: T('Lateness over time' ) }), h('div', { class: 'sub', text: T('Average delay of the tasks done in each bar') }))),
+      t.known === 0 ? noTiming('latetrend-none') : h('div', {},
+        h('div', { class: `bars ${many ? 'tight' : ''}` }, t.items.map((it) =>
+          h('div', { class: 'bar-col', title: it.n ? T('{title}: average {time}', { title: it.title, time: formatMinutes(it.avg) }) : it.title },
+            h('div', { class: 'bar-pct', text: detailed && it.n ? formatMinutes(it.avg) : '' }),
+            h('div', { class: 'bar-planned lt-bar', style: { height: `${it.n ? Math.max(3, Math.round((it.avg / t.maxAvg) * BAR_AREA)) : 0}px` } })))),
+        h('div', { class: `bar-labels ${many ? 'tight' : ''}` }, t.items.map((it, i) =>
+          h('div', {}, h('div', { class: 'bl-name', text: i % stride === 0 ? it.label : '' }), h('div', { class: 'bl-ratio', text: '' }))))));
+  }
+
+  function formatMinutes(m) {
+    if (m === null || m === undefined) return '–';
+    if (m === 0) return T('On time');
+    const hrs = Math.floor(m / 60);
+    return hrs > 0 ? T('{h}h {m}m', { h: hrs, m: m % 60 }) : T('{m}m', { m });
+  }
+
   // ---- screen ---------------------------------------------------------------------------------------------------------
 
   WW.renderStats = function renderStats() {
@@ -268,7 +345,7 @@
     const root = clear(document.getElementById('view'));
     const chosen = WW.state.settings.statsCharts;
     const kpiIds = chosen.filter((id) => id.startsWith('kpi-'));
-    const builders = { bars: barsCard, zones: zonesCard, heat: heatCard, trend: trendCard, categories: categoriesCard, late: lateCard };
+    const builders = { bars: barsCard, zones: zonesCard, heat: heatCard, trend: trendCard, categories: categoriesCard, late: lateCard, lateness: latenessCard, lateby: latebyCard, latetrend: latetrendCard };
     const cards = chosen.filter((id) => builders[id]);
     root.append(
       header(data),

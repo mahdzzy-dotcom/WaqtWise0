@@ -130,6 +130,13 @@ function earliestDay(tasks, todayKey) {
   return earliest < limit ? limit : earliest;
 }
 
+// When a done occurrence was ticked, in milliseconds. null when it is not known (done before the time was recorded).
+function completedTime(task, dateKey) {
+  const iso = task && task.completedAt && task.completedAt[dateKey];
+  const ms = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(ms) ? ms : null;
+}
+
 // Map: Planning Day key -> counted occurrences. Done or past-due only.
 function collectDays(provider, tasks, options, fromKey, toKey, nowMs) {
   const memo = new Map();
@@ -152,6 +159,7 @@ function collectDays(provider, tasks, options, fromKey, toKey, nowMs) {
       days.get(key).push({
         taskId: o.taskId, dateKey: o.dateKey, key, title: o.title, categoryId: o.categoryId, minutes: o.durationMinutes,
         done: o.done, startMs: o.start.getTime(), zone: placed.zoneIndex,
+        completedMs: o.done ? completedTime(task, o.dateKey) : null,
       });
     }
   }
@@ -163,12 +171,13 @@ function collectDays(provider, tasks, options, fromKey, toKey, nowMs) {
 // tasks do not rewrite history. An entry is stored as a short list to keep the data file small.
 
 function packEntry(e) {
-  return [e.taskId, e.dateKey, e.title, e.categoryId, e.minutes, e.done ? 1 : 0, e.startMs, e.zone];
+  return [e.taskId, e.dateKey, e.title, e.categoryId, e.minutes, e.done ? 1 : 0, e.startMs, e.zone, e.completedMs === undefined ? null : e.completedMs];
 }
 
 function unpackEntry(a, key) {
   return {
     taskId: a[0], dateKey: a[1], key, title: a[2], categoryId: a[3], minutes: a[4], done: a[5] === 1, startMs: a[6], zone: a[7],
+    completedMs: Number.isFinite(a[8]) ? a[8] : null, // older snapshots do not have it
   };
 }
 
@@ -190,13 +199,35 @@ function totals(list) {
   for (const e of list) { if (e.done) done++; minutes += e.minutes; }
   return { total: list.length, done, minutes };
 }
+
+// ---- lateness ---------------------------------------------------------------------------------
+// A done occurrence is late when it was ticked more than `thresholdMs` after its start time. Its delay is the time
+// from the start to the tick (never negative). Occurrences without a recorded tick time are left out.
+function delayStat(list, thresholdMs) {
+  let n = 0;
+  let late = 0;
+  let sum = 0;
+  let max = 0;
+  for (const e of list) {
+    if (!e.done || e.completedMs === null || e.completedMs === undefined) continue;
+    const delay = Math.max(0, e.completedMs - e.startMs);
+    n++;
+    sum += delay;
+    if (delay > max) max = delay;
+    if (delay > thresholdMs) late++;
+  }
+  return { n, late, onTime: n - late, avg: n ? Math.round(sum / 60000 / n) : null, max: Math.round(max / 60000) };
+}
+const lateMinutes = (m) => (m === null ? '–' : m === 0 ? tr('On time') : formatDuration(m));
 const percentOf = (t) => (t.total ? Math.round((t.done / t.total) * 100) : null);
 
 // ---- the whole picture ------------------------------------------------------------------------
 
 // args: { provider, tasks, categories, options, now, query }
-function computeStats({ provider, tasks, categories, options, now, query, weekStart = 0, frozen = null }) {
+function computeStats({ provider, tasks, categories, options, now, query, weekStart = 0, frozen = null, lateAfterMinutes = 60 }) {
   const nowMs = now.getTime();
+  const thresholdMs = lateAfterMinutes * 60000;
+  const taskById = new Map(tasks.map((t) => [t.id, t]));
   const todayKey = currentPlanningDayKey(provider, now);
   const earliestKey = earliestDay(tasks, todayKey);
   const r = resolveRange(query, todayKey, weekStart);
@@ -207,7 +238,12 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
     const through = frozen.through || '';
     for (const key of Object.keys(frozen.days)) {
       if (key > through || key >= todayKey) continue;
-      days.set(key, frozen.days[key].map((a) => unpackEntry(a, key)));
+      days.set(key, frozen.days[key].map((a) => {
+        const e = unpackEntry(a, key);
+        // Snapshots saved before the tick time was kept: take it from the task if it still exists.
+        if (e.done && e.completedMs === null) e.completedMs = completedTime(taskById.get(e.taskId), e.dateKey);
+        return e;
+      }));
     }
   }
 
@@ -245,6 +281,17 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
   // ---- key figures ----
   const pctNow = percentOf(cur);
   const pctBefore = percentOf(before);
+  const dNow = delayStat(inRange, thresholdMs);
+  const dBefore = delayStat(listFor(r.prevStart, r.prevDataEnd), thresholdMs);
+  const onNow = dNow.n ? Math.round((dNow.onTime / dNow.n) * 100) : null;
+  const onBefore = dBefore.n ? Math.round((dBefore.onTime / dBefore.n) * 100) : null;
+  const onTimeKpi = {
+    id: 'ontime', label: tr('Done on time'), value: onNow === null ? '–' : String(onNow), unit: '%',
+    delta: onNow === null ? { text: tr('No timing data yet'), tone: 'none' }
+      : onBefore === null ? { text: tp(dNow.n, 'Out of {n} timed task', 'Out of {n} timed tasks'), tone: 'none' }
+        : onNow === onBefore ? { text: tr('Same as {period}', { period: lastPeriod }), tone: 'flat' }
+          : { text: tr(onNow > onBefore ? '▲ {n} pts vs {period}' : '▼ {n} pts vs {period}', { n: Math.abs(onNow - onBefore), period: lastPeriod }), tone: onNow > onBefore ? 'up' : 'down' },
+  };
   const kpis = [
     {
       id: 'rate', label: tr('Completion rate'), value: pctNow === null ? '–' : String(pctNow), unit: '%',
@@ -261,6 +308,7 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
             tone: cur.done > before.done ? 'up' : 'down',
           },
     },
+    onTimeKpi,
     { id: 'streak', label: tr('Current streak · as of today'), value: String(current), unit: tp(current, 'day', 'days'), delta: { text: tp(best, 'Best: {n} day', 'Best: {n} days'), tone: 'none' } },
     {
       id: 'time', label: tr('Planned time'), value: formatDuration(cur.minutes), unit: '',
@@ -279,7 +327,8 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
   const items = [];
   const bucket = (label, title, list, future) => {
     const t = totals(list);
-    items.push({ label, title, done: t.done, total: t.total, pct: percentOf(t), future: Boolean(future) });
+    const d = delayStat(list, thresholdMs);
+    items.push({ label, title, done: t.done, total: t.total, pct: percentOf(t), future: Boolean(future), delayAvg: d.avg, delayN: d.n });
   };
   if (unit === 'zone') {
     ZONE_SHORT.forEach((name, i) => bucket(tr(name), tr(ZONE_NAMES[i]), inRange.filter((e) => e.zone === i + 1)));
@@ -336,6 +385,52 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
         ageLabel: ago <= 0 ? tr('Today') : tp(ago, '1 day late', '{n} days late'),
       };
     }),
+  };
+
+  // ---- lateness: which tasks are done late, and by how much ----
+  const perTask = new Map();
+  for (const e of inRange) {
+    if (!perTask.has(e.taskId)) perTask.set(e.taskId, { taskId: e.taskId, title: e.title, list: [], missed: 0, lastKey: e.dateKey, lastStart: e.startMs });
+    const g = perTask.get(e.taskId);
+    g.list.push(e);
+    if (!e.done) g.missed++;
+    if (e.startMs >= g.lastStart) { g.title = e.title; g.lastKey = e.dateKey; g.lastStart = e.startMs; }
+  }
+  const lateRows = [];
+  for (const g of perTask.values()) {
+    const d = delayStat(g.list, thresholdMs);
+    if (d.late === 0 && g.missed === 0) continue;
+    lateRows.push({
+      taskId: g.taskId, dateKey: g.lastKey, title: g.title, avg: d.avg, n: d.n, late: d.late, missed: g.missed,
+      avgLabel: lateMinutes(d.avg), maxLabel: d.n ? lateMinutes(d.max) : '–',
+    });
+  }
+  lateRows.sort((a, b) => ((b.avg === null ? -1 : b.avg) - (a.avg === null ? -1 : a.avg)) || b.late - a.late || b.missed - a.missed || a.title.localeCompare(b.title));
+  const lateness = {
+    thresholdLabel: formatDuration(lateAfterMinutes),
+    measured: dNow.n,
+    unknown: inRange.filter((e) => e.done && e.completedMs === null).length,
+    lateCount: dNow.late,
+    avgLabel: lateMinutes(dNow.avg),
+    total: lateRows.length,
+    items: lateRows.slice(0, 8),
+  };
+  const delayRow = (name, color, list) => {
+    const d = delayStat(list, thresholdMs);
+    return { name, color, avg: d.avg, avgLabel: lateMinutes(d.avg), n: d.n, late: d.late };
+  };
+  const lateByZone = ZONE_NAMES.map((name, i) => ({ index: i + 1, ...delayRow(tr(name), null, inRange.filter((e) => e.zone === i + 1)) }));
+  const lateByCategory = categoryRows.map((c) => ({ ...delayRow(c.name, c.color, groups.get(c.id)), id: c.id }));
+  const lateBy = {
+    zones: lateByZone,
+    categories: lateByCategory,
+    maxAvg: Math.max(1, ...lateByZone.map((z) => z.avg || 0), ...lateByCategory.map((c) => c.avg || 0)),
+  };
+  const lateTrend = {
+    unit: bars.unit,
+    items: items.map((i) => ({ label: i.label, title: i.title, avg: i.delayAvg, n: i.delayN, future: i.future })),
+    maxAvg: Math.max(1, ...items.map((i) => i.delayAvg || 0)),
+    known: items.filter((i) => i.delayN > 0).length,
   };
 
   // ---- heat map ----
@@ -425,7 +520,7 @@ function computeStats({ provider, tasks, categories, options, now, query, weekSt
     earliestKey,
     prevQuery: nearby.prev,
     nextQuery: nearby.next,
-    kpis, bars, zones, categories: categoryRows, late, heat, trend,
+    kpis, bars, zones, categories: categoryRows, late, lateness, lateBy, lateTrend, heat, trend,
     empty: days.size === 0,
   };
 }

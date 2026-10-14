@@ -54,6 +54,8 @@
     return T('{h}h {m}m before', { h: Math.floor(n / 60), m: n % 60 });
   }
 
+  WW.offsetLabel = offsetLabel;
+
   function newRule(startDate) {
     return {
       startDate,
@@ -74,6 +76,8 @@
     if (isEdit) {
       info = await WW.call('getTaskForEdit', { taskId: options.taskId, dateKey: options.dateKey });
       f = info.form;
+    } else if (options.prefill) {
+      f = options.prefill;
     } else {
       f = await WW.call('newTaskDefaults', options.defaultKey);
     }
@@ -417,7 +421,7 @@
           h('label', { class: 'switch' },
             h('input', {
               type: 'checkbox', id: 'f-fullscreen', checked: Boolean(rem.fullScreen),
-              onchange: (e) => { rem.fullScreen = e.target.checked; },
+              onchange: (e) => { rem.fullScreen = e.target.checked; renderReminders(); const again = document.getElementById('f-fullscreen'); if (again) again.focus(); },
             }),
             h('span', { text: T('Full-screen alert at the start time'), style: { fontWeight: '600' } })),
           h('p', {
@@ -425,7 +429,17 @@
             text: settings.fullScreenAlerts
               ? T('At exactly the start time a full-screen reminder covers the screen until you click a button. Its look is set in Settings.')
               : T('Full-screen alerts are switched off in Settings, so this will not show until they are switched on there.'),
-          }))
+          }),
+          rem.fullScreen
+            ? h('div', { style: { marginTop: '12px' } },
+              h('label', { class: 'switch' },
+                h('input', {
+                  type: 'checkbox', id: 'f-random-notes', checked: Boolean(rem.randomNotes),
+                  onchange: (e) => { rem.randomNotes = e.target.checked; },
+                }),
+                h('span', { text: T('Show one note at random'), style: { fontWeight: '600' } })),
+              h('p', { class: 'hint', text: T('Separate the notes with ; (for example: first note; second note). The alert shows one of them each time, and every note is shown once before any is repeated.') }))
+            : null)
       );
       remindersBox.appendChild(
         h('div', { class: 'field' },
@@ -521,9 +535,10 @@
       }
       saveBtn.disabled = true;
       try {
-        await WW.call('saveTask', { mode: options.mode, taskId: options.taskId, dateKey: options.dateKey, scope, form: f });
+        await WW.call('saveTask', { mode: options.mode, taskId: options.taskId, dateKey: options.dateKey, scope, form: f, fromFreeTaskId: options.fromFreeTaskId });
         dlg.close();
-        WW.toast(isEdit ? T('Task saved') : T('Task added'));
+        WW.toast(isEdit ? T('Task saved') : options.fromFreeTaskId ? T('Task scheduled') : T('Task added'));
+        if (options.fromFreeTaskId && WW.refreshFreeCount) WW.refreshFreeCount();
         WW.afterChange();
       } catch (error) {
         showErrors([error.message]);

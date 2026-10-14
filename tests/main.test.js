@@ -85,6 +85,8 @@ function makeFakeElectron({ userData, lock = true, saveTo, openFrom, packaged = 
     isDestroyed() { return this.destroyed; }
     isMinimized() { return false; }
     restore() {}
+    maximize() { this.maximized = true; this.maximizeCount = (this.maximizeCount || 0) + 1; }
+    isMaximized() { return Boolean(this.maximized); }
     show() { this.visible = true; this.shownCount += 1; }
     hide() { this.visible = false; this.hiddenCount += 1; }
     focus() {}
@@ -232,6 +234,7 @@ test('Start-up: app id, one secure window showing our page, shown when ready', a
   assert.equal(win.visible, false);
   win.emit('ready-to-show');
   assert.equal(win.visible, true);
+  assert.equal(win.maximized, true, 'the window opens maximized');
   app.cleanup();
 });
 
@@ -240,10 +243,12 @@ test('22. Started by Windows at login (--hidden): stays hidden in the tray', asy
   const win = app.win();
   win.emit('ready-to-show');
   assert.equal(win.visible, false, 'the window does not pop up');
+  assert.notEqual(win.maximized, true, 'nothing is maximized while hidden');
   assert.equal(app.trays.length, 1, 'but the tray icon is there');
   assert.ok(app.main.getEngine(), 'and the reminder engine is running');
   trayItem(app, 'Open / Show').click();
   assert.equal(win.visible, true, 'it opens from the tray');
+  assert.equal(win.maximized, true, 'and comes up maximized');
   app.cleanup();
 });
 

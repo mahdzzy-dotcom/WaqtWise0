@@ -65,11 +65,13 @@
     const act = (key) => () => { if (handlers && handlers[key] && !state.guardActive) handlers[key](); };
     const button = (label, key, primary) =>
       h('button', { type: 'button', class: primary ? 'primary' : '', text: label, disabled: state.guardActive, onclick: act(key), dataset: { action: key } });
+    // "Got it" is always shown; the others follow the choice in Settings.
+    const shown = a.buttons || { snooze: true, open: true, done: true };
     parts.push(h('div', { class: 'alert-actions' },
       button(T('Got it'), 'dismiss', true),
-      button(TP(state.snoozeMinutes, 'Snooze {n} minute', 'Snooze {n} minutes'), 'snooze', false),
-      button(T('Open task'), 'open', false),
-      button(T('Mark as Done'), 'done', false)));
+      shown.snooze ? button(TP(state.snoozeMinutes, 'Snooze {n} minute', 'Snooze {n} minutes'), 'snooze', false) : null,
+      shown.open ? button(T('Open task'), 'open', false) : null,
+      shown.done ? button(T('Mark as Done'), 'done', false) : null));
 
     if (state.remaining > 0) {
       parts.push(h('div', { class: 'alert-more', text: TP(state.remaining, '{n} more task starting now', '{n} more tasks starting now') }));

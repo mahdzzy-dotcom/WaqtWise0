@@ -9,7 +9,9 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
   "exportedAt": "2026-10-04T10:00:00.000Z",
   "settings":   { ... },
   "categories": [ { "id": "cat-work", "name": "Work", "color": "#3b82f6" } ],
-  "tasks":      [ { ... } ]
+  "tasks":      [ { ... } ],
+  "freeTasks":  [ { ... } ],  (optional; the free to-do list, see "Free task")
+  "statsHistory": { ... }       (optional; the saved statistics of finished days, see below)
 }
 ```
 
@@ -56,6 +58,29 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
   `src/core/recurrence.js` for every field (weekday lists, monthly modes, yearly modes, end rules).
 - `exceptions`, `additions`, `overrides` and `completions` are keyed by occurrence date (`YYYY-MM-DD`).
 
+## Full-screen alert buttons
+
+`settings.alertAppearance.buttons` = `{ snooze, open, done }` (true/false, all true by default) chooses which of the buttons **Snooze**, **Open task** and **Mark as Done** the full-screen alert shows. **Got it** has no switch and is always shown, so the alert can always be closed (Enter and Esc also close it). The choice is for every task. The "Details shown" choices (`show`: time, duration, zone, category, priority, and `notes.show`) work the same way. Older files without `buttons` get all three.
+
+## One note at random
+
+In the task form, with the full-screen alert on, **Show one note at random** is saved as `reminders.randomNotes` (true/false; it can differ per occurrence like the other reminder options). The notes are split on `;` or `؛`, blanks are dropped, and the full-screen alert shows one message. Every message is shown once before any is repeated (never the same one twice in a row), and the same message stays when the alert is only shown again on the same day; after **Snooze** the alert comes back with a different message. With only one message the notes are shown as written. Everywhere else (details, edit form) the notes are shown whole. What was shown last is kept in `data.json` as `noteRotation` (`{ taskId: { sig, dateKey, index, used } }`); it is not part of the export file, and it starts over when the notes are changed.
+
+## Saved statistics (`statsHistory`)
+
+`{ through: 'YYYY-MM-DD', days: { 'YYYY-MM-DD': [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone, completedMs], ...] } }` keeps the numbers of finished days, so the past stays fixed when tasks are edited or deleted. It is part of the export file. On import, a file that has it **replaces** the saved statistics on this computer (they belong to the imported tasks); an older file without it leaves them as they are. `completedMs` (the moment the task was ticked, or `null`) is the 9th item; rows saved by older versions have 8 items and the app then reads the tick time from the task. Damaged days are skipped.
+
+## Free task
+
+The Free To-Do list holds tasks that have no time yet. It has no reminders, no zone and no statistics. When a free task is scheduled it becomes a normal task and leaves the list. A file without `freeTasks` (made by an older version) loads with an empty list.
+
+```json
+{ "id": "…", "title": "Renew ID", "notes": "", "priority": "Low|Medium|High", "categoryId": null,
+  "durationMinutes": null, "done": false, "createdAt": "2026-10-13T08:00:00.000Z" }
+```
+
+`durationMinutes` is optional (`null` or 1 to 10080); it is used when the task is scheduled. The order of the list is the order shown.
+
 ## Full-screen alert
 
 - Each task's `reminders` object may contain `"fullScreen": true` (missing means off). Single-occurrence edits in
@@ -66,6 +91,8 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
 
 ## Settings added in this version
 
+- `lateAfterMinutes` (0-10080, default 60): a done task is *late* when it was ticked more than this many minutes after its start time. It only affects the lateness charts in Statistics.
+
 `settings.useCustomCity` (true/false) and `settings.customCity` (`null` or `{ "name", "latitude", "longitude", "timeZone" }`,
 the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is dropped when a backup is imported.
 `settings.language` (`"en"` or `"ar"`) is the language of the app. Task titles, notes and category names you typed are never translated; the built-in category names, zone names and all other texts are translated when shown.
@@ -74,11 +101,11 @@ the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is drop
 
 ## Saved data file (not the export file)
 
-`data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone], ...] } }`,
+`data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone, completedMs], ...] } }`,
 the saved statistics of finished days. It is not part of the export file. Automatic copies of `data.json` are kept
 in the `backups` folder next to it (`data-YYYY-MM-DD.json`, `before-import-*.json`, `before-restore-*.json`).
 
 ## Limits
 
-Numbers are checked when a task is saved and when a data file is loaded (a task or a part that fails is skipped with a message, never trusted): task duration 1 to 10080 minutes (7 days); "minutes before or after a prayer or task" and reminder times 0 to 10080; "every N" 1 to 999; "after N occurrences" 1 to 9999; at most 20000 tasks per file; a backup file larger than 20 MB is refused. The limits are in `src/core/limits.js`.
+Numbers are checked when a task is saved and when a data file is loaded (a task or a part that fails is skipped with a message, never trusted): task duration 1 to 10080 minutes (7 days); "minutes before or after a prayer or task" and reminder times 0 to 10080; "every N" 1 to 999; "after N occurrences" 1 to 9999; at most 20000 tasks and 5000 free tasks per file; a title of at most 200 characters; a backup file larger than 20 MB is refused. The limits are in `src/core/limits.js`.
 

@@ -268,7 +268,11 @@
             check(['notes', 'bold'], T('Bold')), check(['notes', 'italic'], T('Italic'))))),
         row(T('Details shown'), h('div', { class: 'row' },
           check(['show', 'time'], T('Time')), check(['show', 'duration'], T('Duration')), check(['show', 'zone'], T('Zone')),
-          check(['show', 'category'], T('Category')), check(['show', 'priority'], T('Priority'))))),
+          check(['show', 'category'], T('Category')), check(['show', 'priority'], T('Priority')))),
+        row(T('Buttons shown'), h('div', {},
+          h('div', { class: 'row' },
+            check(['buttons', 'snooze'], T('Snooze')), check(['buttons', 'open'], T('Open task')), check(['buttons', 'done'], T('Mark as Done'))),
+          h('p', { class: 'hint', text: T('"Got it" is always shown, so the reminder can always be closed.') })))),
       h('div', { style: { marginTop: '16px' } },
         preview,
         h('div', { class: 'row', style: { marginTop: '10px' } },
@@ -389,6 +393,16 @@
     const weekStart = h('select', { class: 'sel-auto', 'aria-label': T('First day of the week'), onchange: (e) => save({ weekStart: Number(e.target.value) }) },
       [6, 0, 1].map((d) => [d, i18n.weekdayLong(d)]).map(([v, l]) => h('option', { value: v, text: l, selected: s.weekStart === v })));
 
+    const lateHours = Math.floor(s.lateAfterMinutes / 60);
+    const lateMins = s.lateAfterMinutes % 60;
+    const commitLate = async (hours, minutes) => {
+      await save({ lateAfterMinutes: hours * 60 + minutes });
+      WW.renderSettings();
+    };
+    const lateAfter = h('span', { class: 'row' },
+      numberField(lateHours, 0, 168, T('hours'), (n) => commitLate(n, lateMins), T('Late after, hours')),
+      numberField(lateMins, 0, 59, T('minutes'), (n) => commitLate(lateHours, n), T('Late after, minutes')));
+
     const workingDays = h('span', { class: 'daytoggle' },
       dayLabels().map((label, i) => h('button', {
         type: 'button', class: s.workingDays.includes(i) ? 'on' : '', text: label, 'aria-pressed': String(s.workingDays.includes(i)),
@@ -440,6 +454,7 @@
           row(T('Background message'), toggle(T('Show the "still running in the background" message'), s.showBackgroundMessage, (v) => save({ showBackgroundMessage: v }), T('Shown once, the next time the window is closed. Closing the window keeps WaqtWise running in the tray so reminders keep working.'))),
           row(T('Theme'), theme),
           row(T('First day of the week'), h('div', {}, weekStart, h('p', { class: 'hint', text: T('The day cards at the top of the Daily View and the weeks in Statistics start from this day.') }), h('p', { class: 'hint', text: T('Careful: tasks that repeat every 2 or more weeks also count their weeks from this day, so changing it can move them to other weeks.') }))),
+          row(T('Late tasks'), h('div', {}, lateAfter, h('p', { class: 'hint', text: T('A task counts as late when you tick it as done more than this long after its start time. Used by the lateness charts in Statistics.') }))),
           row(T('Working days'), h('div', {}, workingDays, h('p', { class: 'hint', text: T('Used by "last working day" repeat rules.') }))))),
 
       alertSection(),

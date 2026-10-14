@@ -20,9 +20,10 @@ class DataTransferMethods {
   // Replaces tasks, categories and settings with the contents of a backup.
   importData(input) {
     this.freezePast();
-    const { data, warnings } = parseImport(input);
+    const { data, warnings, hasHistory } = parseImport(input);
     if (this.store.backupNow) this.store.backupNow('before-import'); // so a wrong import can be undone
-    this.data = { ...data, reminderState: this.data.reminderState, statsHistory: this.history() };
+    // A file with saved statistics replaces the ones on this computer (they belong to the imported tasks); an older file keeps them.
+    this.data = { ...data, reminderState: this.data.reminderState, statsHistory: hasHistory ? data.statsHistory : this.history() };
     this.providerCache = null;
     this.applyLanguage();
     this.persist();
