@@ -484,7 +484,7 @@ input[type='color'] { width: 40px; height: 34px; padding: 2px; border: 1px solid
 .stats-grid > .bars-card { flex-grow: 2; }
 .stats-grid > .zones-card { flex: 1 1 360px; }
 
-.stats-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 18px; }
+.stats-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 18px; }
 .stats-card.kpi { padding: 20px 24px; }
 .kpi-label { font-size: 13px; color: var(--text-soft); font-weight: 600; }
 .kpi-value { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
@@ -649,3 +649,10 @@ input.onoff:checked ~ .onoff-state { color: var(--accent); }
 .details-footer .btn { width: 100%; }
 .dialog.details-dialog { max-width: 860px; }
 .details-footer .btn { white-space: nowrap; }
+
+/* Lateness statistics */
+.lt-bar { background: var(--accent); max-width: 56px; }
+.lateby-head { font-size: 12px; font-weight: 700; color: var(--muted); margin: 14px 0 6px; }
+.lateby-head:first-child { margin-top: 4px; }
+.late-by-line .cat-pct { white-space: nowrap; min-width: 58px; text-align: end; }
+.lateby-head:first-child { margin-top: 12px; }

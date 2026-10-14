@@ -161,14 +161,14 @@ function normalizeTask(raw) {
 
 // Clean up a whole data object (from disk or an import file).
 // Returns { data, warnings }. Never throws for individual bad items; they are skipped and reported.
-// Saved statistics of finished days: { through: 'YYYY-MM-DD' | null, days: { key: [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone], ...] } }
+// Saved statistics of finished days: { through: 'YYYY-MM-DD' | null, days: { key: [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone, completedMs|null], ...] } } (older rows have no last item)
 function normalizeStatsHistory(raw) {
   const empty = { through: null, days: {} };
   if (!isPlainObject(raw) || !isValidKey(raw.through) || !isPlainObject(raw.days)) return empty;
   const days = {};
   for (const [key, list] of Object.entries(raw.days)) {
     if (!isValidKey(key) || key > raw.through || !Array.isArray(list)) continue;
-    const clean = list.filter((a) => Array.isArray(a) && a.length === 8
+    const clean = list.filter((a) => Array.isArray(a) && (a.length === 8 || (a.length === 9 && (a[8] === null || Number.isFinite(a[8]))))
       && typeof a[0] === 'string' && typeof a[1] === 'string' && typeof a[2] === 'string'
       && (a[3] === null || typeof a[3] === 'string') && Number.isFinite(a[4]) && (a[5] === 0 || a[5] === 1)
       && Number.isFinite(a[6]) && Number.isInteger(a[7]));

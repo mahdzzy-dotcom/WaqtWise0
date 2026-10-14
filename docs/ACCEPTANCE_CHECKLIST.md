@@ -90,6 +90,10 @@ Do these once after installing. They are the parts that cannot be tested without
 
 27. **Statistics travel with the export**: complete a task, delete it the next day, export, and import the file on another computer (or after Restore): the finished day still shows in Statistics.
 
-28. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 27 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
+28. **Opens maximized**: close the app to the tray and open it again (tray icon or shortcut): the window fills the screen. Start with Windows is unchanged: it stays hidden in the tray until you open it, then it is maximized.
+
+29. **Late tasks**: Settings -> Application -> **Late tasks**: set 1 hour 0 minutes. Make a daily task at 12:00 and tick it at 1:30 PM. Statistics shows it in **Most late tasks** (average 1h 30m), **Done on time** drops, and the zone, category and over-time charts show the delay. Raise the limit to 2 hours: it is no longer late. Add or remove these charts with **Manage**.
+
+30. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 29 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
 
 If any of these fails, note which number and what you saw, and send it back.

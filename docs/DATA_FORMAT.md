@@ -68,7 +68,7 @@ In the task form, with the full-screen alert on, **Show one note at random** is 
 
 ## Saved statistics (`statsHistory`)
 
-`{ through: 'YYYY-MM-DD', days: { 'YYYY-MM-DD': [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone], ...] } }` keeps the numbers of finished days, so the past stays fixed when tasks are edited or deleted. It is part of the export file. On import, a file that has it **replaces** the saved statistics on this computer (they belong to the imported tasks); an older file without it leaves them as they are. Damaged days are skipped.
+`{ through: 'YYYY-MM-DD', days: { 'YYYY-MM-DD': [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone, completedMs], ...] } }` keeps the numbers of finished days, so the past stays fixed when tasks are edited or deleted. It is part of the export file. On import, a file that has it **replaces** the saved statistics on this computer (they belong to the imported tasks); an older file without it leaves them as they are. `completedMs` (the moment the task was ticked, or `null`) is the 9th item; rows saved by older versions have 8 items and the app then reads the tick time from the task. Damaged days are skipped.
 
 ## Free task
 
@@ -91,6 +91,8 @@ The Free To-Do list holds tasks that have no time yet. It has no reminders, no z
 
 ## Settings added in this version
 
+- `lateAfterMinutes` (0-10080, default 60): a done task is *late* when it was ticked more than this many minutes after its start time. It only affects the lateness charts in Statistics.
+
 `settings.useCustomCity` (true/false) and `settings.customCity` (`null` or `{ "name", "latitude", "longitude", "timeZone" }`,
 the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is dropped when a backup is imported.
 `settings.language` (`"en"` or `"ar"`) is the language of the app. Task titles, notes and category names you typed are never translated; the built-in category names, zone names and all other texts are translated when shown.
@@ -99,7 +101,7 @@ the time zone being an IANA name such as `Asia/Riyadh`). An invalid city is drop
 
 ## Saved data file (not the export file)
 
-`data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone], ...] } }`,
+`data.json` also holds `statsHistory`: `{ "through": "YYYY-MM-DD", "days": { "<day>": [[taskId, dateKey, title, categoryId, minutes, done(0/1), startMs, zone, completedMs], ...] } }`,
 the saved statistics of finished days. It is not part of the export file. Automatic copies of `data.json` are kept
 in the `backups` folder next to it (`data-YYYY-MM-DD.json`, `before-import-*.json`, `before-restore-*.json`).
 

@@ -47,12 +47,16 @@ const STATS_CHARTS = [
   { id: 'kpi-done', title: 'Tasks done', about: 'How many tasks were done, out of how many' },
   { id: 'kpi-streak', title: 'Current streak', about: 'Days in a row with at least 70% done' },
   { id: 'kpi-time', title: 'Planned time', about: 'Total time of the counted tasks' },
+  { id: 'kpi-ontime', title: 'Done on time', about: 'Share of done tasks that were not late' },
   { id: 'bars', title: 'Done vs planned', about: 'Bars of done and planned tasks' },
   { id: 'zones', title: 'By zone', about: 'Share done in each of the 5 zones' },
   { id: 'heat', title: 'Calendar heat map', about: 'Every day of the month or year as a colour' },
   { id: 'trend', title: 'Completion trend', about: 'How the completion rate moves over time' },
   { id: 'categories', title: 'By category', about: 'Share done and planned time per category' },
   { id: 'late', title: 'Needs attention', about: 'Tasks not done and already past their time' },
+  { id: 'lateness', title: 'Most late tasks', about: 'Which tasks are done late, and by how much on average' },
+  { id: 'lateby', title: 'Lateness by zone and category', about: 'Average delay in each zone and category' },
+  { id: 'latetrend', title: 'Lateness over time', about: 'Average delay in each day, week or month' },
 ];
 const STATS_CHART_IDS = STATS_CHARTS.map((c) => c.id);
 
@@ -205,6 +209,8 @@ const DEFAULT_SETTINGS = {
   alertAppearance: DEFAULT_ALERT_APPEARANCE,
   // Statistics screen: the charts that are shown, in order (see STATS_CHARTS)
   statsCharts: STATS_CHART_IDS.slice(),
+  // A done task counts as late when it was ticked this many minutes after its start time (default 1 hour)
+  lateAfterMinutes: 60,
 };
 
 function isWholeNumber(n, min, max) {
@@ -249,6 +255,9 @@ function validateSettings(settings) {
     if (!Array.isArray(list) || !list.every((id) => STATS_CHART_IDS.includes(id)) || new Set(list).size !== list.length) {
       errors.push(t('Choose charts from the list, each one only once'));
     }
+  }
+  if ('lateAfterMinutes' in s && !isWholeNumber(s.lateAfterMinutes, 0, 10080)) {
+    errors.push(t('The time after which a task counts as late must be a whole number of minutes between 0 and 10080 (7 days)'));
   }
   if ('weekStart' in s && ![6, 0, 1].includes(s.weekStart)) errors.push(t('Choose Saturday, Sunday or Monday as the first day of the week'));
   if ('alertScreens' in s && !ALERT_SCREENS.includes(s.alertScreens)) errors.push(t('Choose all screens or the main screen'));

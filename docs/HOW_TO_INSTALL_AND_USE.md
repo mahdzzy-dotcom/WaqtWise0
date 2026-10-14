@@ -104,6 +104,8 @@ other weeks (tasks that repeat every week are not affected).
   and one just before every import or restore (the last 5 of each).
 - To go back: Settings -> Data -> **Restore from backup…**, pick a copy and click **Restore**. The data you had
   just before is saved first, so a restore can be undone from the same list.
+- **Late tasks**: in Settings choose after how many hours and minutes a task counts as late (counted from its start time to the moment you tick it). Statistics shows which tasks are late most and by how much. Charts can be added in Statistics -> Manage.
+- The window always opens maximized.
 - Statistics of days that are over are saved, so editing or deleting a task later does not change the past.
 
 ## 8. Uninstall
