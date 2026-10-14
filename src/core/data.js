@@ -9,7 +9,7 @@
 //  they are shown on the bell and are NOT part of the export file.)
 //
 // Export file (documented in docs/DATA_FORMAT.md):
-//   { app: 'waqtwise', formatVersion: 1, exportedAt, settings, categories, tasks, freeTasks }
+//   { app: 'waqtwise', formatVersion: 1, exportedAt, settings, categories, tasks, freeTasks, statsHistory }
 //
 // Derived values (zones, end times, durations, occurrences, prayer times) are never saved.
 
@@ -261,6 +261,7 @@ function buildExport(data, now = new Date()) {
     categories: data.categories,
     tasks: data.tasks,
     freeTasks: data.freeTasks || [],
+    statsHistory: data.statsHistory || { through: null, days: {} },
   };
 }
 
@@ -285,7 +286,10 @@ function parseImport(input) {
     throw new Error(t('This backup was made by a newer version of WaqtWise. Please update the app first.'));
   }
   // Future versions: convert older formats here, one step at a time.
-  return normalizeData(parsed);
+  const result = normalizeData(parsed);
+  // Files made before the saved statistics were exported have no history: the caller keeps its own then.
+  result.hasHistory = isPlainObject(parsed.statsHistory);
+  return result;
 }
 
 module.exports = {

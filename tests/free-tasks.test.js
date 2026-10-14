@@ -115,6 +115,9 @@ test('Task details: time, zone, repeat summary, reminders', () => {
   assert.deepEqual(d.reminderOffsets, [10]);
   assert.equal(d.fullScreen, true);
   assert.ok(d.zoneName);
+  assert.ok(d.zoneStartLabel && d.zoneEndLabel, 'the zone limits are given for the little timeline');
+  assert.ok(d.leftPct >= 0 && d.leftPct < 100 && d.widthPct > 0 && d.leftPct + Math.min(d.widthPct, 100 - d.leftPct) <= 100.0001);
+  assert.equal(typeof d.continuesPastZone, 'boolean');
   const rec = s.saveTask({ mode: 'create', form: scheduleForm({ date: null, recurrence: { startDate: DAY, frequency: 'daily', interval: 1, end: { type: 'never' } } }) }).taskId;
   const r = s.getTaskDetails({ taskId: rec, dateKey: DAY });
   assert.equal(r.canReturnToFree, false);

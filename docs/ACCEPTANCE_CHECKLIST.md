@@ -86,6 +86,10 @@ Do these once after installing. They are the parts that cannot be tested without
 
 25. **Alert buttons**: Settings -> Full-screen reminder -> **Buttons shown**: switch off Snooze and Mark as Done. The preview shows only "Got it" and "Open task". Click **Preview full screen**: the real alert has the same buttons. Switch them on again. "Got it" has no switch.
 
-26. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 25 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
+26. **Saving problems**: with the app open, make the data file read-only (right-click `data.json` in the app's data folder -> Properties -> Read-only) and add a task: a red banner appears at the top ("Your changes could not be saved…") with the reason; "Export a copy" saves a backup file. Remove the read-only mark and press **Try again**: the banner goes away. Do this only on a test copy of your data.
+
+27. **Statistics travel with the export**: complete a task, delete it the next day, export, and import the file on another computer (or after Restore): the finished day still shows in Statistics.
+
+28. **After an Electron upgrade** (the app now uses Electron 44): install the new build and go through checks 1 to 27 once, with extra care for the tray icon, notifications (click to open), the full-screen reminder and starting with Windows.
 
 If any of these fails, note which number and what you saw, and send it back.

@@ -558,6 +558,10 @@ async function setTime(page, hour, minute, ampm) {
     assert.match(text, /4:30 PM/);
     assert.match(text, /45m/);
     assert.match(text, /tyre;chain/, 'notes are shown as written');
+    assert.ok(!/null|undefined/.test(await page.textContent('.dialog')), 'no stray "null" in the details window');
+    assert.equal(await page.locator('.details-timeline .details-fill').count(), 1, 'the little timeline is there');
+    const fill = await page.$eval('.details-fill', (el) => [parseFloat(el.style.width), el.getBoundingClientRect().width]);
+    assert.ok(fill[0] > 0 && fill[0] <= 100 && fill[1] > 0);
     await shot(page, 'task-details');
     await page.click('#details-edit');
     await page.waitForSelector('#f-title');
@@ -580,6 +584,21 @@ async function setTime(page, hour, minute, ampm) {
     await page.click('#drawer .drawer-item:has-text("Daily View")');
     await page.waitForSelector('.day-chip');
   });
+  await step('details of a repeating task or a task without notes show no stray "null"', async () => {
+    const key = await page.evaluate(() => window.WW.state.dayKey);
+    service.saveTask({ mode: 'create', form: {
+      title: 'Daily plain task', start: { mode: 'fixed', time: '10:30' }, durationMinutes: 20, date: key,
+      recurrence: { startDate: key, frequency: 'daily', interval: 1, end: { type: 'never' } },
+      reminders: { enabled: false, offsets: [] }, priority: 'Low', categoryId: null, notes: '',
+    } });
+    await page.evaluate(() => window.WW.afterChange());
+    await taskRow(page, 'Daily plain task').click();
+    await page.waitForSelector('#details-edit');
+    assert.equal(await page.locator('#details-free').count(), 0, 'a repeating task cannot go back to the free list');
+    assert.ok(!/null|undefined/.test(await page.textContent('.dialog')), await page.textContent('.dialog'));
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.dialog', { state: 'detached' });
+  });
   await step('the form offers "Show one note at random" only when the full-screen alert is on, and keeps it', async () => {
     await page.click('#add-btn');
     await page.waitForSelector('#f-title');
@@ -600,6 +619,27 @@ async function setTime(page, hour, minute, ampm) {
     assert.equal(await page.isChecked('#f-random-notes'), true);
     await page.keyboard.press('Escape');
     await page.waitForSelector('.dialog', { state: 'detached' });
+  });
+  await step('a failed save shows a red banner with the reason; Try again clears it when saving works', async () => {
+    assert.equal(await page.isHidden('#save-banner'), true);
+    const good = service.store.save.bind(service.store);
+    service.store.save = () => { const e = new Error('no space'); e.code = 'ENOSPC'; throw e; };
+    await page.click('#add-btn');
+    await page.fill('#f-title', 'Cannot be saved');
+    await page.click('.dialog-footer .btn.primary');
+    await page.waitForSelector('#save-banner:not([hidden])');
+    const text = await page.textContent('#save-banner');
+    assert.match(text, /could not be saved/);
+    assert.match(text, /The disk is full/);
+    await shot(page, 'save-banner');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.dialog', { state: 'detached' });
+    await page.click('#save-retry');
+    await page.waitForTimeout(200);
+    assert.equal(await page.isHidden('#save-banner'), false, 'still failing: the banner stays');
+    service.store.save = good;
+    await page.click('#save-retry');
+    await page.waitForSelector('#save-banner', { state: 'hidden' });
   });
   await step('menu opens Settings', async () => {
     await page.click('#menu-btn');

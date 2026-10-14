@@ -8,7 +8,7 @@ const core = require('../../core');
 const { copy } = require('./util');
 
 const {
-  normalizeFreeTask, MAX_FREE_TASKS, buildOccurrence, describeRule, normalizeRule, placementNote, reminderOffsets, formatTime12, formatDuration, dateKey, isValidKey, localCategoryName,
+  normalizeFreeTask, MAX_FREE_TASKS, deriveZone, buildOccurrence, describeRule, normalizeRule, placementNote, reminderOffsets, formatTime12, formatDuration, dateKey, isValidKey, localCategoryName,
 } = core;
 
 class FreeTaskMethods {
@@ -138,6 +138,10 @@ class FreeTaskMethods {
     const o = buildOccurrence(this.provider(), task, key, false, this.recurrenceOptions());
     const category = this.categoryOf(o.categoryId);
     const zone = placementNote(this.provider(), o.start, key);
+    const { zone: zoneInfo } = deriveZone(this.provider(), o.start);
+    const zoneSpan = zoneInfo.end.getTime() - zoneInfo.start.getTime();
+    const from = Math.max(o.start.getTime(), zoneInfo.start.getTime());
+    const to = Math.min(o.end.getTime(), zoneInfo.end.getTime());
     return {
       taskId,
       dateKey: key,
@@ -152,6 +156,12 @@ class FreeTaskMethods {
       durationLabel: formatDuration(o.durationMinutes),
       zoneIndex: zone.zoneIndex,
       zoneName: t(zone.zoneName),
+      zoneStartLabel: this.zoneTimeLabel(zoneInfo.start),
+      zoneEndLabel: this.zoneTimeLabel(zoneInfo.end),
+      // where the task sits inside its zone (for the little timeline); a task that runs past the zone is cut at its end
+      leftPct: ((from - zoneInfo.start.getTime()) / zoneSpan) * 100,
+      widthPct: Math.max(((to - from) / zoneSpan) * 100, 1.5),
+      continuesPastZone: o.end.getTime() > zoneInfo.end.getTime(),
       isRecurring: Boolean(task.recurrence),
       repeatSummary: task.recurrence ? describeRule(normalizeRule(task.recurrence)) : '',
       done: o.done,

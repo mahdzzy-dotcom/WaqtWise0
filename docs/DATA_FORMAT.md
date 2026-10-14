@@ -10,7 +10,8 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
   "settings":   { ... },
   "categories": [ { "id": "cat-work", "name": "Work", "color": "#3b82f6" } ],
   "tasks":      [ { ... } ],
-  "freeTasks":  [ { ... } ]   (optional; the free to-do list, see "Free task")
+  "freeTasks":  [ { ... } ],  (optional; the free to-do list, see "Free task")
+  "statsHistory": { ... }       (optional; the saved statistics of finished days, see below)
 }
 ```
 
@@ -64,6 +65,10 @@ Export / Import (Settings -> Data) uses one JSON file. Version 1:
 ## One note at random
 
 In the task form, with the full-screen alert on, **Show one note at random** is saved as `reminders.randomNotes` (true/false; it can differ per occurrence like the other reminder options). The notes are split on `;` or `؛`, blanks are dropped, and the full-screen alert shows one message. Every message is shown once before any is repeated (never the same one twice in a row), and the same message stays when the alert is only shown again on the same day; after **Snooze** the alert comes back with a different message. With only one message the notes are shown as written. Everywhere else (details, edit form) the notes are shown whole. What was shown last is kept in `data.json` as `noteRotation` (`{ taskId: { sig, dateKey, index, used } }`); it is not part of the export file, and it starts over when the notes are changed.
+
+## Saved statistics (`statsHistory`)
+
+`{ through: 'YYYY-MM-DD', days: { 'YYYY-MM-DD': [[taskId, dateKey, title, categoryId, minutes, done, startMs, zone], ...] } }` keeps the numbers of finished days, so the past stays fixed when tasks are edited or deleted. It is part of the export file. On import, a file that has it **replaces** the saved statistics on this computer (they belong to the imported tasks); an older file without it leaves them as they are. Damaged days are skipped.
 
 ## Free task
 

@@ -30,6 +30,10 @@ English and Arabic (Settings -> Language). Arabic is a full right-to-left screen
 
 The side menu has a **Free To-Do list** for tasks that have no time yet (own screen, quick add with Enter, a **Schedule task** button that opens the normal task window). Clicking a task anywhere (Daily View, bell, missed reminders, Statistics, a notification) shows its details; **Edit task** opens the edit window. Free tasks are saved in `data.json` and travel with export, import and backups (see `docs/DATA_FORMAT.md`).
 
+## Saving problems and statistics
+
+If the data cannot be saved (disk full, file locked), a red banner stays at the top until a save works again; it has **Try again** and **Export a copy**. The export file also carries the saved statistics of finished days (`statsHistory`), so they survive moving to another computer. See `docs/DATA_FORMAT.md`.
+
 ## Alert buttons and details
 
 Settings -> Full-screen reminder lets you choose which details and which buttons (Snooze, Open task, Mark as Done) the alert shows; "Got it" always stays.

@@ -91,7 +91,13 @@ class MissedAlertMethods {
     const before = JSON.stringify(rotation[item.taskId] || null);
     if (record) rotation[item.taskId] = record;
     else delete rotation[item.taskId];
-    if (JSON.stringify(record) !== before) this.persist();
+    if (JSON.stringify(record) !== before) {
+      try {
+        this.persist();
+      } catch (error) {
+        // not being able to remember the choice must never stop the alert from showing
+      }
+    }
     return note;
   }
 

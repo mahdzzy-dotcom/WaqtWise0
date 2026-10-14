@@ -125,3 +125,14 @@ test('A bad switch value is refused by the same checks as the other reminder opt
   const loaded = normalizeData({ tasks: [{ ...service.getTasks()[0], reminders: { enabled: true, offsets: [], randomNotes: 'yes' } }] });
   assert.equal(loaded.data.tasks.length, 0, 'a file with a bad value skips that task');
 });
+
+test('If the choice cannot be saved, the alert still shows its note', () => {
+  const { service, store } = make(() => 0);
+  const { taskId } = service.saveTask({ mode: 'create', form: {
+    title: 'T', start: { mode: 'fixed', time: '08:00' }, durationMinutes: 30, date: DAY, recurrence: null,
+    reminders: { enabled: true, offsets: [], fullScreen: true, randomNotes: true }, priority: 'Medium', categoryId: null, notes: 'one; two',
+  } });
+  store.save = () => { throw new Error('disk full'); };
+  const [a] = service.buildAlertItems([item(service, taskId, DAY)]);
+  assert.equal(a.notes, 'one');
+});

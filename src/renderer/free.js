@@ -175,15 +175,26 @@
       return;
     }
     const dlg = WW.openDialog({ title: d.title });
-    const row = (label, value) => (value ? [h('div', { class: 'details-label', text: label }), h('div', { class: 'details-value', text: value })] : []);
+    const row = (label, value) => (value ? [h('div', { class: 'details-label', text: label }), h('div', { class: 'details-value' }, value)] : []);
+    // Each time is kept as one piece, so the range keeps its order when the screen reads right to left.
+    const timeRange = h('span', {}, h('bdi', { dir: 'ltr', text: d.startLabel }), ' – ', h('bdi', { dir: 'ltr', text: d.endLabel }), d.endsNextDay ? ` (${T('next day')})` : '');
     const reminderText = d.remindersOn ? d.reminderOffsets.map((n) => WW.offsetLabel(n)).join(T(', ')) : T('Off');
     const reminders = `${reminderText}${d.fullScreen ? ` · ${T('Full-screen')}` : ''}${d.randomNotes ? ` · ${T('One note at random')}` : ''}`;
-    dlg.body.append(
+    // Element.append turns a null into the text "null", so empty parts are left out first.
+    const put = (parent, ...nodes) => parent.append(...nodes.filter(Boolean));
+    put(dlg.body,
       h('div', { class: 'details-head' },
         h('span', { class: `readout zone-readout z${d.zoneIndex}`, text: d.zoneName }),
         d.done ? h('span', { class: 'tag pill', text: T('Done') }) : null),
+      // Where the task sits inside its zone.
+      h('div', { class: `details-timeline z${d.zoneIndex}`, role: 'img', 'aria-label': `${d.zoneName}: ${d.zoneStartLabel} – ${d.zoneEndLabel}` },
+        h('div', { class: 'details-bar' }, h('i', { class: 'details-fill', style: { insetInlineStart: `${d.leftPct}%`, width: `${Math.min(d.widthPct, 100 - d.leftPct)}%` } })),
+        h('div', { class: 'details-bar-labels' },
+          h('bdi', { dir: 'ltr', text: d.zoneStartLabel }),
+          d.continuesPastZone ? h('span', { class: 'details-more', text: T('→ Continues into next zone') }) : null,
+          h('bdi', { dir: 'ltr', text: d.zoneEndLabel }))),
       h('div', { class: 'details-grid' },
-        row(T('Time'), `${d.startLabel} – ${d.endLabel}${d.endsNextDay ? ` (${T('next day')})` : ''}`),
+        row(T('Time'), timeRange),
         row(T('Duration'), d.durationLabel),
         row(T('Repeats'), d.repeatSummary),
         row(T('Starts after'), d.followsTitle),
@@ -194,7 +205,7 @@
 
     const after = () => { dlg.close(); WW.afterChange(); };
     const guard = async (fn) => { try { await fn(); } catch (error) { WW.toast(error.message, 'error'); } };
-    dlg.footer.append(
+    put(dlg.footer,
       h('button', { class: 'btn danger', type: 'button', id: 'details-delete', text: T('Delete'), onclick: () => guard(async () => {
         let scope = 'all';
         if (d.isRecurring) {

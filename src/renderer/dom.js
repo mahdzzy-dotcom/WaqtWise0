@@ -99,6 +99,7 @@
       return await window.api.call(method, ...args);
     } catch (error) {
       const raw = String((error && error.message) || error);
+      if (method !== 'getSaveStatus' && WW.refreshSaveBanner) WW.refreshSaveBanner();
       throw new Error(raw.replace(/^Error invoking remote method '[^']+': (Error: )?/, '').replace(/^Error: /, ''));
     }
   };

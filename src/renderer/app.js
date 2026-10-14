@@ -284,9 +284,41 @@
   // Called after anything changes the data.
   WW.afterChange = async function afterChange() {
     refreshBell();
+    WW.refreshSaveBanner();
     if (WW.state.view === 'daily') await WW.showDay(WW.state.dayKey);
     else if (WW.state.view === 'stats') await WW.showStats();
     else if (WW.state.view === 'free') await WW.showFree();
+  };
+
+  // ---- Banner: the data could not be saved -----------------------------------------------------------------------
+
+  // Shown as long as the last save failed, and hidden by itself when a save works again.
+  WW.refreshSaveBanner = async function refreshSaveBanner() {
+    const banner = document.getElementById('save-banner');
+    if (!banner) return;
+    let status;
+    try {
+      status = await window.api.call('getSaveStatus');
+    } catch (error) {
+      return;
+    }
+    if (status.ok) {
+      banner.hidden = true;
+      clear(banner);
+      return;
+    }
+    clear(banner).append(
+      h('div', { class: 'save-text' },
+        T('Your changes could not be saved. Do not close WaqtWise yet.'),
+        h('span', { class: 'save-reason', text: status.message })),
+      h('button', { class: 'btn small', type: 'button', id: 'save-retry', text: T('Try again'), onclick: async () => {
+        try { await window.api.call('retrySave'); } catch (error) { /* the banner says why */ }
+        await WW.refreshSaveBanner();
+        const again = document.getElementById('save-banner');
+        if (again && again.hidden) WW.toast(T('Saved'));
+      } }),
+      h('button', { class: 'btn small', type: 'button', id: 'save-export', text: T('Export a copy'), onclick: () => WW.exportData() }));
+    banner.hidden = false;
   };
 
   // ---- Bell and menu ----------------------------------------------------------------------------------------------
@@ -613,6 +645,8 @@
     }
 
     refreshBell();
+    WW.refreshSaveBanner();
+    setInterval(() => WW.refreshSaveBanner(), 15000);
     if (!WW.state.settings.welcomeShown) WW.showWelcome();
     hideSplash();
 
